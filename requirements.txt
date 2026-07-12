@@ -1,0 +1,7 @@
+streamlit
+anthropic
+chromadb
+scikit-learn
+pandas
+numpy
+python-dotenv
