@@ -1,6 +1,6 @@
 import streamlit as st
 from datetime import date
-from APIֹ_key import ask_full_agent
+from agent import ask_full_agent
 
 
 #הגדרות עמוד

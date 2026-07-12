@@ -36,7 +36,6 @@ for key in all_cluster_models:
     table = all_cluster_models[key]['table']
     lift_column = all_cluster_models[key]['lift_column']
     sex = all_cluster_models[key]['sex']
-    include_age = all_cluster_models[key]['include_age']
     k = all_cluster_models[key]['k']
 
     #דגימה אקראית לציור בלבד . אם הטבלה קטנה מהמדגם לוקחים הכל
@@ -47,7 +46,6 @@ for key in all_cluster_models:
 
     #כותרת בעברית
     sex_heb = 'Men' if sex == 'M' else 'Women'
-    age_heb = 'with age' if include_age == 1 else 'no age'
 
     #גרף פיזור - משקל גוף מול הליפט , צבוע לפי קבוצה
     fig, ax = plt.subplots(figsize=(9, 6))
@@ -62,7 +60,7 @@ for key in all_cluster_models:
 
     ax.set_xlabel('Bodyweight (kg)')
     ax.set_ylabel(f'{lift_heb[lift_column]} (kg)')
-    ax.set_title(f'{key} | {lift_heb[lift_column]} | {sex_heb} | {age_heb} | k={k}')
+    ax.set_title(f'{key} | {lift_heb[lift_column]} | {sex_heb} | k={k}')
     ax.grid(True, alpha=0.3)
 
     #מקרא של הקבוצות
