@@ -143,7 +143,7 @@ for config in configurations:
         'sex': config['sex']
         
     }
-print("\nכל 16 המודלים נבנו בהצלחה!")
+print("\nכל 8 המודלים נבנו בהצלחה!")
 print("מפתחות זמינים ב-all_models:")
 for key in all_models:
     print(f"\n--- {key} ---")

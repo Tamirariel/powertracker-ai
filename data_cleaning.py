@@ -1,7 +1,9 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-path = r'C:\Users\gilad\שולחן העבודה\AI\myapp\AGENT_data'
+import os
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+path = os.path.join(BASE_DIR, 'AGENT_data')
 
 df = pd.read_csv(path + r'\openpowerlifting.csv', low_memory=False)
 
@@ -42,11 +44,6 @@ competitions_per_athlete = df['Name'].value_counts()
 athletes_5plus = sum(competitions_per_athlete >= 5)
 print(f"מתאמנים עם 5 תחרויות ומעלה: {athletes_5plus}")
 print(f"אחוז מסך המתאמנים: {athletes_5plus / len(competitions_per_athlete) * 100:.1f}%")
-
-
-#הדגמה של התפלגות המשקלים בסקוואט לגברים
-only_man = df[df['Sex'] == 'M']
-only_woman = df[df['Sex'] == 'F']
 
 
 df.to_csv(path + r'\cleaned_openpowerlifting.csv', index=False)

@@ -1,61 +1,60 @@
-
-# -*- coding: utf-8 -*-
 import streamlit as st
 from datetime import date
 from APIֹ_key import ask_full_agent
 
-# ============ הגדרות עמוד ============
+
+#הגדרות עמוד
 st.set_page_config(
     page_title="PowerTracker",
     page_icon="🏋️",
     layout="centered",
 )
 
-# יישור לימין - כל האפליקציה בעברית
+
+#יישור לימין - כל האפליקציה בעברית
 st.markdown("""
 <style>
-    /* צ'אט מיושר לימין */
     .stChatMessage { direction: rtl; text-align: right; }
     [data-testid="stChatInput"] textarea { direction: rtl; }
-
-    /* יישור טקסט בלבד בתוך הסייד-בר, בלי לגעת בכיוון הקונטיינר */
     [data-testid="stSidebarContent"] * { text-align: right; }
-
-    /* כותרת ותוכן מרכזי */
     .stApp h1, .stApp p, .stApp .stCaption { direction: rtl; text-align: right; }
 </style>
 """, unsafe_allow_html=True)
 
-# ============ אתחול זיכרון ============
-# היסטוריית שיחה
+
+#אתחול היסטוריית שיחה
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# פרופיל משתמש - נשמר בין שאלות
+#אתחול פרופיל משתמש - נשמר בין שאלות
 if "profile" not in st.session_state:
     st.session_state.profile = {"sex": None, "age": None, "bodyweight": None}
 
-# יומן אימונים - רשימה של אימונים שהוזנו
+#אתחול יומן אימונים - רשימה של אימונים שהוזנו
 if "workouts" not in st.session_state:
     st.session_state.workouts = []
 
 
-# ============ סרגל צד ============
+#סרגל צד
 with st.sidebar:
     st.header("הפרופיל שלי")
 
-    # --- נתוני משתמש ---
+    #נתוני משתמש . גיל ומשקל בלי ברירת מחדל כדי שהמשתמש יזין אותם בעצמו
     sex = st.radio("מגדר", ["זכר", "נקבה"], horizontal=True)
-    age = st.number_input("גיל", min_value=10, max_value=100, value=25)
-    bodyweight = st.number_input("משקל גוף (קג)", min_value=30.0, max_value=250.0, value=80.0, step=0.5)
+    age = st.number_input("גיל (חובה)", min_value=10, max_value=100, value=None, placeholder="הזן גיל")
+    bodyweight = st.number_input("משקל גוף בקג (חובה)", min_value=30.0, max_value=250.0, value=None, step=0.5, placeholder="הזן משקל")
 
+    #שמירת הפרופיל רק אם הוזנו גיל ומשקל . המודלים חייבים אותם
     if st.button("שמור פרופיל", use_container_width=True):
-        st.session_state.profile = {"sex": sex, "age": age, "bodyweight": bodyweight}
-        st.success("הפרופיל נשמר")
+        if age is None or bodyweight is None:
+            st.error("חובה להזין גיל ומשקל גוף")
+        else:
+            st.session_state.profile = {"sex": sex, "age": age, "bodyweight": bodyweight}
+            st.success("הפרופיל נשמר")
 
     st.divider()
 
-    # --- הוספת אימון ליומן ---
+    #הוספת אימון ליומן
     st.header("יומן אימונים")
 
     with st.expander("הוסף אימון"):
@@ -70,10 +69,9 @@ with st.sidebar:
             })
             st.success("האימון נוסף")
 
-    # --- הצגת אימונים אחרונים ---
+    #הצגת 5 האימונים האחרונים מהחדש לישן
     if st.session_state.workouts:
         st.caption("אימונים אחרונים:")
-        # מציג את 5 האחרונים, מהחדש לישן
         for w in reversed(st.session_state.workouts[-5:]):
             st.text(f"{w['date']} | {w['lift']} | {w['value']} קג")
     else:
@@ -81,7 +79,7 @@ with st.sidebar:
 
     st.divider()
 
-    # --- קצב התקדמות צפוי ---
+    #חישוב קצב התקדמות צפוי לפי הפרופיל והאימון האחרון
     st.header("קצב התקדמות")
     if st.button("חשב קצב צפוי", use_container_width=True):
         p = st.session_state.profile
@@ -100,20 +98,21 @@ with st.sidebar:
             st.session_state.messages.append({"role": "assistant", "content": answer})
             st.rerun()
 
-# ============ אזור הצ'אט המרכזי ============
+
+#אזור הצאט המרכזי
 st.title("PowerTracker")
 st.caption("שאל אותי על הביצועים שלך — השוואה למתאמנים אחרים, קצב התקדמות, או כל שאלה על פאוורליפטינג")
 
-# הצגת כל היסטוריית השיחה
+#הצגת כל היסטוריית השיחה
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# קליטת שאלה חדשה
+#קליטת שאלה חדשה
 question = st.chat_input("לדוגמה: אני מרים 140 בסקוואט, כמה אני ביחס לאחרים?")
 
 if question:
-    # בניית הקשר מהפרופיל - כדי שהמשתמש לא יצטרך לחזור על הנתונים שלו
+    #בניית הקשר מהפרופיל כדי שהמשתמש לא יצטרך לחזור על הנתונים שלו
     p = st.session_state.profile
     context_parts = []
     if p["sex"] is not None:
@@ -123,18 +122,18 @@ if question:
     if p["bodyweight"] is not None:
         context_parts.append(f"משקל גוף: {p['bodyweight']} קג")
 
-    # אם יש פרופיל שמור - מצרפים אותו לשאלה
+    #אם יש פרופיל שמור מצרפים אותו לשאלה
     if context_parts:
         full_question = f"[נתוני המשתמש: {', '.join(context_parts)}] {question}"
     else:
         full_question = question
 
-    # הצגת הודעת המשתמש ושמירה בהיסטוריה
+    #הצגת הודעת המשתמש ושמירה בהיסטוריה
     with st.chat_message("user"):
         st.markdown(question)
     st.session_state.messages.append({"role": "user", "content": question})
 
-    # קריאה לסוכן עם חיווי המתנה
+    #קריאה לסוכן עם חיווי המתנה
     with st.chat_message("assistant"):
         with st.spinner("בודק את הנתונים..."):
             answer = ask_full_agent(full_question)

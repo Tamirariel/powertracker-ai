@@ -3,8 +3,6 @@ import os
 from dotenv import load_dotenv
 import pickle
 import chromadb
-from sklearn.preprocessing import StandardScaler
-scaler = StandardScaler() 
 chroma_client = chromadb.Client()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 collection = chroma_client.get_or_create_collection("powerlifting_clusters")
@@ -32,15 +30,14 @@ for i in all_cluster_models:
  #השמת משתנים  מתוך המילון
  table = all_cluster_models[i]['table']
  sex = all_cluster_models[i]['sex']
- is_age = all_cluster_models[i]['include_age']
  lift_column = all_cluster_models[i]['lift_column']
  
- #בדיקת מין וגיל
+ #בדיקת מין
  sex_heb = 'גברים' if sex == 'M' else 'נשים'
- age_heb = 'עם גיל' if is_age == 1 else 'ללא גיל'
+
  
  #ממוצעי הקבוצה 
- cols = ['Age_real', 'BodyweightKg_real', f'{lift_column}_real'] if is_age == 1 else ['BodyweightKg_real', f'{lift_column}_real']
+ cols = ['Age_real', 'BodyweightKg_real', f'{lift_column}_real'] 
  stats = table.groupby('cluster')[cols].mean()
  #נתונים נוספים . טיית תקן ,מספר מאמנים , טווח , מינימום ומקסימום
  for cluster_id, row in stats.iterrows():
@@ -52,7 +49,7 @@ for i in all_cluster_models:
      max_lift = cluster_data[f'{lift_column}_real'].max()
      n = len(cluster_data)
     
-     age_str = f"גיל ממוצע {row['Age_real']:.1f}, " if is_age == 1 else " "
+     age_str = f"גיל ממוצע {row['Age_real']:.1f} "
      #המרה לעברית 
      lift_heb = {
       'Best3SquatKg': 'סקוואט',
@@ -60,7 +57,7 @@ for i in all_cluster_models:
       'Best3DeadliftKg': 'דדליפט',
       'TotalKg': 'טוטאל'
       }
-     doc = f"קבוצה {cluster_id} של {sex_heb} ב-{lift_heb[lift_column]} {age_heb}: " \
+     doc = f"קבוצה {cluster_id} של {sex_heb} ב-{lift_heb[lift_column]}: " \
           f"{age_str}" \
           f"משקל {row['BodyweightKg_real']:.1f} קג, " \
           f"{lift_heb[lift_column]} ממוצע {row[f'{lift_column}_real']:.1f} קג, " \
@@ -112,11 +109,8 @@ def class_user_predict(lift_column,sex,Age,BodyweightKg,lift_value):
  model = all_classification_models[key_model]
 
  # נרמול נתוני המשתמש
- if Age is not None:
-    user_data = [[Age, BodyweightKg, lift_value]]
- else:
-    user_data = [[BodyweightKg, lift_value]]
-
+ user_data = [[Age, BodyweightKg, lift_value]]
+ 
  class_predict = model.predict(user_data)[0]
  return class_predict , key_model   
 
@@ -124,7 +118,8 @@ def class_user_predict(lift_column,sex,Age,BodyweightKg,lift_value):
 
 #פונקציית שאלת הסוכן classification
 def ask_agent_classifiation(lift_column,sex,Age,BodyweightKg,lift_value):
-
+ if Age is None:
+     return "כדי לבצע ניתוח מדויק צריך את הגיל שלך - מה גילך?"
  the_class, key_model = class_user_predict(lift_column, sex, Age, BodyweightKg, lift_value)
 
     
@@ -159,11 +154,10 @@ def ask_agent_classifiation(lift_column,sex,Age,BodyweightKg,lift_value):
 
 
 #פונקציה שמוצאת את המפתח הנכון לפי משתנים שהוזנו
-def find_key_cluster(lift_column, sex, include_age):
+def find_key_cluster(lift_column, sex):
     for key, value in all_cluster_models.items():
         if (value['lift_column'] == lift_column and
-            value['sex'] == sex and
-            value['include_age'] == include_age):
+            value['sex'] == sex):
             return key
     return None
 
@@ -172,15 +166,13 @@ def find_key_cluster(lift_column, sex, include_age):
 #פונקציה שמוצאת קלאסטר של משתמש . (מספר)
 def cluster_user(lift_column,sex,Age,BodyweightKg,lift_value):
  #מציאת מודל מתאים לפי פרטים שהוזנו
- key_model = find_key_cluster(lift_column, sex, 1 if Age is not None else 0)
+ key_model = find_key_cluster(lift_column, sex)
  model = all_cluster_models[key_model]['model']
  scaler = all_cluster_models[key_model]['scaler']
 
  # נרמול נתוני המשתמש
- if Age is not None:
-    user_data = [[Age, BodyweightKg, lift_value]]
- else:
-    user_data = [[BodyweightKg, lift_value]]
+ user_data = [[Age, BodyweightKg, lift_value]]
+ 
 
  user_scaled = scaler.transform(user_data)
  cluster = model.predict(user_scaled)[0]
@@ -191,9 +183,10 @@ def cluster_user(lift_column,sex,Age,BodyweightKg,lift_value):
 
 #פונקציית שאלת הסוכן cluster
 def ask_agent_cluster(user_query,lift_column,sex,Age,BodyweightKg,lift_value):
-
+ if Age is None:
+     return "כדי לבצע ניתוח מדויק צריך את הגיל שלך - מה גילך?"
  the_cluster, key_model = cluster_user(lift_column, sex, Age, BodyweightKg, lift_value)
-
+ 
 
  # שלב 1: שליפת context מChromaDB
  result = collection.get(ids=[f"{key_model}_cluster_{the_cluster}"])
@@ -205,7 +198,7 @@ def ask_agent_cluster(user_query,lift_column,sex,Age,BodyweightKg,lift_value):
 
     נתוני המשתמש:
    - מגדר: {'גבר' if sex == 'M' else 'אישה'}
-   - גיל: {Age if Age is not None else 'לא ידוע'}
+   - גיל: {Age}
    - משקל גוף: {BodyweightKg} קג
    - ביצוע ב-{lift_column}: {lift_value} קג
    - קבוצה שסווג אליה: {the_cluster}
@@ -237,11 +230,11 @@ tools = [
             "properties": {
                 "lift_column": {"type": "string", "description": "עמודת הליפט. סקוואט=Best3SquatKg, בנץ/לחיצת חזה=Best3BenchKg, דדליפט=Best3DeadliftKg, טוטאל/סה\"כ=TotalKg"},
                 "sex": {"type": "string", "description": "מגדר: M או F"},
-                "Age": {"type": "number", "description": "גיל המתאמן, או null אם לא ידוע"},
+                "Age": {"type": "number", "description": "גיל המתאמן בשנים"},
                 "BodyweightKg": {"type": "number", "description": "משקל גוף בקילוגרמים"},
                 "lift_value": {"type": "number", "description": "ערך הליפט בקילוגרמים"}
             },
-            "required": ["lift_column", "sex", "BodyweightKg", "lift_value"]
+            "required": ["lift_column", "sex", "BodyweightKg", "lift_value","Age"]
         }
     },
 
@@ -298,12 +291,13 @@ def ask_full_agent(user_query):
 
 
  #אם הבין שצריך את כלי ניתוח
+ 
  if tool_name == "analyze_cluster":
     result = ask_agent_cluster(
         user_query,
         tool_input['lift_column'],
         tool_input['sex'],
-        tool_input.get('Age'),
+        tool_input['Age'],
         tool_input['BodyweightKg'],
         tool_input['lift_value']
     )
@@ -312,7 +306,7 @@ def ask_full_agent(user_query):
     result = ask_agent_classifiation(
         tool_input['lift_column'],
         tool_input['sex'],
-        tool_input.get('Age'),
+        tool_input['Age'],
         tool_input['BodyweightKg'],
         tool_input['lift_value']
     )
