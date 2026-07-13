@@ -1,3 +1,6 @@
+#קובץ עבודה מול הסוכנים . שליחת פרומפטים , הפעלת מודלים 
+
+
 import anthropic
 import os
 from dotenv import load_dotenv
@@ -20,7 +23,7 @@ client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 with open(os.path.join(BASE_DIR, 'cluster_model', 'cluster_model_list.pkl'), 'rb') as f:
  all_cluster_models = pickle.load(f)
 
-with open(os.path.join(BASE_DIR,'classfication_model','classification_model_list.pkl'), 'rb') as f:
+with open(os.path.join(BASE_DIR,'classification_model','classification_model_list.pkl'), 'rb') as f:
     all_classification_models = pickle.load(f)
 
 

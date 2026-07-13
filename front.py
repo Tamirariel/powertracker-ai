@@ -1,12 +1,20 @@
+#ממשק המשתמש בנוגע ליומן האימונים . יצירת האימונים הבאים , עדכון אימונים קודמים . חיבור לקובץ הדטא בייס 
+
+
+
+
 import streamlit as st
 from datetime import date
-from agent import ask_full_agent
+import database
+
+#יצירת הטבלאות אם לא קיימות . בטוח להריץ בכל עליית עמוד
+database.init_db()
 
 
 #הגדרות עמוד
 st.set_page_config(
-    page_title="PowerTracker",
-    page_icon="🏋️",
+    page_title="יומן אימונים",
+    page_icon="📋",
     layout="centered",
 )
 
@@ -14,128 +22,168 @@ st.set_page_config(
 #יישור לימין - כל האפליקציה בעברית
 st.markdown("""
 <style>
-    .stChatMessage { direction: rtl; text-align: right; }
-    [data-testid="stChatInput"] textarea { direction: rtl; }
+    .stApp h1, .stApp h2, .stApp h3, .stApp p, .stApp .stCaption, .stApp label { direction: rtl; text-align: right; }
     [data-testid="stSidebarContent"] * { text-align: right; }
-    .stApp h1, .stApp p, .stApp .stCaption { direction: rtl; text-align: right; }
+    [data-testid="stExpander"] summary { direction: rtl; }
 </style>
 """, unsafe_allow_html=True)
 
 
-#אתחול היסטוריית שיחה
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+#רשימת תרגילים בסיסית . שלושת הראשונים הם תרגילי הפאוורליפטינג ואסור לשנות את האיות שלהם
+BASE_EXERCISE_LIST = [
+    'סקוואט', 'בנץ', 'דדליפט',
+    'לחיצת רגליים', 'לחיצת כתפיים', 'עליות מתח', 'חתירה',
+    'פולי עליון', 'לחיצת חזה בשיפוע', 'כפיפת מרפקים', 'פשיטת מרפקים',
+    'לאנג׳ים', 'כפיפת ברכיים', 'הרחקות כתף', 'בטן',
+]
 
-#אתחול פרופיל משתמש - נשמר בין שאלות
-if "profile" not in st.session_state:
-    st.session_state.profile = {"sex": None, "age": None, "bodyweight": None}
-
-#אתחול יומן אימונים - רשימה של אימונים שהוזנו
-if "workouts" not in st.session_state:
-    st.session_state.workouts = []
+WORKOUT_TYPES = ['רגליים', 'חזה', 'גב', 'כתפיים', 'ידיים', 'גוף מלא']
 
 
-#סרגל צד
-with st.sidebar:
-    st.header("הפרופיל שלי")
+#איחוד הרשימה הבסיסית עם תרגילים שהוזנו ידנית בעבר . ככה תרגיל שהוקלד פעם מופיע מעכשיו ברשימה
+saved_names = database.get_all_exercise_names()
+EXERCISE_LIST = BASE_EXERCISE_LIST + [name for name in saved_names if name not in BASE_EXERCISE_LIST]
+EXERCISE_LIST.append('אחר')
 
-    #נתוני משתמש . גיל ומשקל בלי ברירת מחדל כדי שהמשתמש יזין אותם בעצמו
-    sex = st.radio("מגדר", ["זכר", "נקבה"], horizontal=True)
-    age = st.number_input("גיל (חובה)", min_value=10, max_value=100, value=None, placeholder="הזן גיל")
-    bodyweight = st.number_input("משקל גוף בקג (חובה)", min_value=30.0, max_value=250.0, value=None, step=0.5, placeholder="הזן משקל")
 
-    #שמירת הפרופיל רק אם הוזנו גיל ומשקל . המודלים חייבים אותם
-    if st.button("שמור פרופיל", use_container_width=True):
-        if age is None or bodyweight is None:
-            st.error("חובה להזין גיל ומשקל גוף")
+#אתחול האימון הנוכחי שנבנה . רשימת תרגילים במבנה המקונן של הDB
+if "current_exercises" not in st.session_state:
+    st.session_state.current_exercises = []
+
+
+st.title("יומן אימונים")
+
+
+#בניית אימון חדש
+st.header("אימון חדש")
+
+w_date = st.date_input("תאריך", value=date.today())
+w_type = st.selectbox("סוג אימון", WORKOUT_TYPES)
+
+
+#זיהוי שינוי תאריך באמצע הזנת אימון . מונע איחוד שני אימונים בטעות
+if st.session_state.current_exercises and "form_started_date" in st.session_state:
+    if w_date != st.session_state.form_started_date:
+        st.warning(f"שים לב: התחלת את הטופס בתאריך {st.session_state.form_started_date.strftime('%d/%m/%Y')} "
+                   f"ועכשיו נבחר {w_date.strftime('%d/%m/%Y')} . כל התרגילים בטופס יישמרו יחד בתאריך החדש . "
+                   f"אם התכוונת לאימון נפרד - שמור או נקה את הטופס קודם")
+
+
+
+#פיצר השכפול . מוצג רק אם קיים אימון קודם מאותו סוג
+last_workout = database.get_last_workout_by_type(w_type)
+if last_workout is not None:
+    if st.button(f"שכפל את אימון ה{w_type} מ-{last_workout['date']}", use_container_width=True):
+        #אזהרה אם כבר התחלת להזין אימון . שלא יידרס בטעות
+        if st.session_state.current_exercises:
+            st.warning("יש כבר תרגילים בטופס . אם אתה רוצה לשכפל בכל זאת נקה קודם עם הכפתור למטה")
         else:
-            st.session_state.profile = {"sex": sex, "age": age, "bodyweight": bodyweight}
-            st.success("הפרופיל נשמר")
-
-    st.divider()
-
-    #הוספת אימון ליומן
-    st.header("יומן אימונים")
-
-    with st.expander("הוסף אימון"):
-        w_lift = st.selectbox("תרגיל", ["סקוואט", "בנץ", "דדליפט"])
-        w_value = st.number_input("משקל (קג)", min_value=1.0, max_value=600.0, value=100.0, step=2.5)
-        w_date = st.date_input("תאריך", value=date.today())
-        if st.button("הוסף", use_container_width=True):
-            st.session_state.workouts.append({
-                "lift": w_lift,
-                "value": w_value,
-                "date": w_date.strftime("%d/%m/%Y"),
-            })
-            st.success("האימון נוסף")
-
-    #הצגת 5 האימונים האחרונים מהחדש לישן
-    if st.session_state.workouts:
-        st.caption("אימונים אחרונים:")
-        for w in reversed(st.session_state.workouts[-5:]):
-            st.text(f"{w['date']} | {w['lift']} | {w['value']} קג")
-    else:
-        st.caption("עדיין לא הוזנו אימונים")
-
-    st.divider()
-
-    #חישוב קצב התקדמות צפוי לפי הפרופיל והאימון האחרון
-    st.header("קצב התקדמות")
-    if st.button("חשב קצב צפוי", use_container_width=True):
-        p = st.session_state.profile
-        if p["age"] is None or not st.session_state.workouts:
-            st.warning("צריך פרופיל שמור ולפחות אימון אחד")
-        else:
-            last = st.session_state.workouts[-1]
-            progress_q = (
-             f"אני {'גבר' if p['sex'] == 'זכר' else 'אישה'} בגיל {p['age']}, "
-             f"שוקל {p['bodyweight']} קג ומרים {last['value']} קג ב{last['lift']}. "
-             f"מה קצב ההתקדמות הצפוי שלי?"
-             )
-            with st.spinner("מחשב..."):
-                answer = ask_full_agent(progress_q)
-            st.session_state.messages.append({"role": "user", "content": progress_q})
-            st.session_state.messages.append({"role": "assistant", "content": answer})
+            st.session_state.form_started_date = w_date
+            st.session_state.current_exercises = last_workout['exercises']
             st.rerun()
 
 
-#אזור הצאט המרכזי
-st.title("PowerTracker")
-st.caption("שאל אותי על הביצועים שלך — השוואה למתאמנים אחרים, קצב התקדמות, או כל שאלה על פאוורליפטינג")
-
-#הצגת כל היסטוריית השיחה
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
-
-#קליטת שאלה חדשה
-question = st.chat_input("לדוגמה: אני מרים 140 בסקוואט, כמה אני ביחס לאחרים?")
-
-if question:
-    #בניית הקשר מהפרופיל כדי שהמשתמש לא יצטרך לחזור על הנתונים שלו
-    p = st.session_state.profile
-    context_parts = []
-    if p["sex"] is not None:
-        context_parts.append(f"מגדר: {'גבר' if p['sex'] == 'זכר' else 'אישה'}")
-    if p["age"] is not None:
-        context_parts.append(f"גיל: {p['age']}")
-    if p["bodyweight"] is not None:
-        context_parts.append(f"משקל גוף: {p['bodyweight']} קג")
-
-    #אם יש פרופיל שמור מצרפים אותו לשאלה
-    if context_parts:
-        full_question = f"[נתוני המשתמש: {', '.join(context_parts)}] {question}"
+#הוספת תרגיל לאימון הנוכחי
+with st.expander("הוסף תרגיל"):
+    ex_choice = st.selectbox("תרגיל", EXERCISE_LIST)
+    if ex_choice == 'אחר':
+        ex_name = st.text_input("שם התרגיל")
     else:
-        full_question = question
+        ex_name = ex_choice
 
-    #הצגת הודעת המשתמש ושמירה בהיסטוריה
-    with st.chat_message("user"):
-        st.markdown(question)
-    st.session_state.messages.append({"role": "user", "content": question})
+    if st.button("הוסף תרגיל לאימון", use_container_width=True):
+        if not ex_name:
+            st.error("צריך לבחור או להקליד שם תרגיל")
+        else:
+            #זכירת התאריך שבו התחיל הטופס . לזיהוי שינוי תאריך באמצע
+            if not st.session_state.current_exercises:
+                st.session_state.form_started_date = w_date
+            st.session_state.current_exercises.append({'name': ex_name, 'sets': []})
+            st.rerun()
 
-    #קריאה לסוכן עם חיווי המתנה
-    with st.chat_message("assistant"):
-        with st.spinner("בודק את הנתונים..."):
-            answer = ask_full_agent(full_question)
-        st.markdown(answer)
-    st.session_state.messages.append({"role": "assistant", "content": answer})
+
+#הצגת התרגילים שנוספו . לכל תרגיל אפשר להוסיף ולמחוק סטים . זהו הבריף
+for i, exercise in reversed(list(enumerate(st.session_state.current_exercises))):
+    st.subheader(exercise['name'])
+
+    #הצגת הסטים הקיימים עם כפתור מחיקה לכל סט
+    for j, s in enumerate(exercise['sets']):
+        col_text, col_del = st.columns([4, 1])
+        with col_text:
+            st.text(f"סט {j+1}: {s['reps']} חזרות | {s['weight']} קג")
+        with col_del:
+            if st.button("מחק", key=f"del_set_{i}_{j}"):
+                exercise['sets'].pop(j)
+                st.rerun()
+
+    #שורת הוספת סטים . אפשר להוסיף כמה סטים זהים במכה אחת
+    col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+    with col1:
+        num_sets = st.number_input("סטים", min_value=1, max_value=15, value=1, key=f"num_sets_{i}")
+    with col2:
+        reps = st.number_input("חזרות", min_value=1, max_value=100, value=8, key=f"reps_{i}")
+    with col3:
+        weight = st.number_input("משקל (קג)", min_value=0.0, max_value=600.0, value=50.0, step=2.5, key=f"weight_{i}")
+    with col4:
+        st.write("")
+        st.write("")
+        if st.button("הוסף", key=f"add_set_{i}"):
+            for _ in range(num_sets):
+                exercise['sets'].append({'reps': reps, 'weight': weight})
+            st.rerun()
+
+    #הסרת תרגיל מהאימון הנוכחי
+    if st.button("הסר תרגיל", key=f"remove_ex_{i}"):
+        st.session_state.current_exercises.pop(i)
+        st.rerun()
+
+    st.divider()
+
+
+#כפתורי שמירה וניקוי . מוצגים רק אם יש תרגילים בטופס
+if st.session_state.current_exercises:
+    #תזכורת בולטת לאן האימון הולך להישמר . מונע שמירה בתאריך לא נכון
+    st.info(f"האימון יישמר בתאריך {w_date.strftime('%d/%m/%Y')} כאימון {w_type}")
+    col_save, col_clear = st.columns([3, 1])
+
+    with col_save:
+        if st.button("שמור אימון", type="primary", use_container_width=True):
+            #בדיקה שאין תרגיל בלי סטים
+            empty_exercises = [ex['name'] for ex in st.session_state.current_exercises if not ex['sets']]
+            if empty_exercises:
+                st.error(f"יש תרגילים בלי סטים: {', '.join(empty_exercises)}")
+            else:
+                workout_id = database.save_workout(str(w_date), w_type, st.session_state.current_exercises)
+                st.session_state.current_exercises = []
+                st.session_state.pop("form_started_date", None)
+                st.success("האימון נשמר!")
+                st.rerun()
+
+    with col_clear:
+        if st.button("נקה טופס", use_container_width=True):
+            st.session_state.current_exercises = []
+            st.session_state.pop("form_started_date", None)
+            st.rerun()
+
+
+st.divider()
+
+
+#היסטוריית אימונים . מהחדש לישן
+st.header("היסטוריה")
+
+all_workouts = database.get_all_workouts()
+
+if not all_workouts:
+    st.caption("עדיין לא נשמרו אימונים")
+
+for w in all_workouts:
+    with st.expander(f"{w['date']} | {w['workout_type']}"):
+        details = database.get_workout_details(w['id'])
+        for exercise in details['exercises']:
+            sets_text = " , ".join(f"{s['reps']}x{s['weight']}" for s in exercise['sets'])
+            st.text(f"{exercise['name']}: {sets_text}")
+
+        if st.button("מחק אימון", key=f"delete_{w['id']}"):
+            database.delete_workout(w['id'])
+            st.rerun()

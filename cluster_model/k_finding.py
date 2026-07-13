@@ -1,3 +1,6 @@
+#קובץ מציאת K הכי רלוונטי לכל קבוצה 
+
+
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler

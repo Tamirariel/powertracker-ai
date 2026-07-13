@@ -1,3 +1,6 @@
+#קובץ יצירת תרשימים להמחשת גרפי מודל הקלאסרטינג - רק עם גיל  
+
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import pickle

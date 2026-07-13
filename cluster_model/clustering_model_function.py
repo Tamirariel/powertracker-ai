@@ -1,3 +1,6 @@
+#החלת מודל הקלאסטרינג על הדטא . חילוק הדטא לפי קבוצות על סמך מאפיינים דומים 
+
+
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
