@@ -7,3 +7,5 @@ scikit-learn
 pandas
 numpy
 python-dotenv
+langfuse
+opentelemetry-instrumentation-anthropic
