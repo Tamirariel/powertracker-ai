@@ -1,3 +1,5 @@
+#קובץ הספריות 
+sqlite3
 streamlit
 anthropic
 chromadb
