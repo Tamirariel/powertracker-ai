@@ -84,12 +84,22 @@ st.title("פאוורליפטינג")
 st.caption("הנתונים כאן נשלפים אוטומטית מיומן האימונים . כל סט של סקוואט , בנץ או דדליפט שנשמר ביומן מופיע כאן")
 
 
-#פרופיל . משותף עם שאר העמודים דרך session_state
+#פרופיל משותף עם שאר העמודים . בפעם הראשונה בסשן טוענים מה-DB במקום להתחיל ריק
 if "profile" not in st.session_state:
-    st.session_state.profile = {"sex": None, "age": None, "bodyweight": None}
+    saved_profile = database.get_profile()
+    if saved_profile is not None:
+        st.session_state.profile = saved_profile
+    else:
+        st.session_state.profile = {"sex": None, "age": None, "bodyweight": None}
+
+
 
 with st.expander("הפרופיל שלי", expanded=st.session_state.profile["age"] is None):
-    sex = st.radio("מגדר", ["זכר", "נקבה"], horizontal=True)
+    #בחירת המגדר השמור כברירת מחדל בתפריט - אחרת הוא תמיד יראה "זכר" גם אם שמרת "נקבה"
+    sex_options = ["זכר", "נקבה"]
+    saved_sex = st.session_state.profile["sex"]
+    sex_index = sex_options.index(saved_sex) if saved_sex in sex_options else 0
+    sex = st.radio("מגדר", sex_options, horizontal=True, index=sex_index)
     age = st.number_input("גיל (חובה)", min_value=10, max_value=100, value=st.session_state.profile["age"], placeholder="הזן גיל")
     bodyweight = st.number_input("משקל גוף בקג (חובה)", min_value=30.0, max_value=250.0, value=st.session_state.profile["bodyweight"], step=0.5, placeholder="הזן משקל")
 
@@ -98,6 +108,8 @@ with st.expander("הפרופיל שלי", expanded=st.session_state.profile["age
             st.error("חובה להזין גיל ומשקל גוף")
         else:
             st.session_state.profile = {"sex": sex, "age": age, "bodyweight": bodyweight}
+            #שמירה גם לDB - כדי שהפרופיל ישרוד סגירת דפדפן
+            database.save_profile(sex, age, bodyweight)
             st.success("הפרופיל נשמר")
 
 

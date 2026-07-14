@@ -1,7 +1,5 @@
 #קובץ הדטא של הפרויקט . שומר אימונים , בניית האימונים הבאים 
 
-
-
 import sqlite3
 import os
 
@@ -20,7 +18,7 @@ def get_connection():
  return conn
 
 
-#יצירת שלוש הטבלאות אם הן לא קיימות . רץ בכל עליית אפליקציה
+#יצירת כל הטבלאות אם הן לא קיימות . רץ בכל עליית אפליקציה
 def init_db():
  conn = get_connection()
 
@@ -52,12 +50,22 @@ def init_db():
  )
  """)
 
+ #טבלת הפרופיל . בכוונה יש בה תמיד רק שורה אחת (id=1) כי יש רק פרופיל אחד - אני
+ #ה-CHECK מונע הכנסת שורה עם id אחר בטעות
+ conn.execute("""
+ CREATE TABLE IF NOT EXISTS profile (
+     id INTEGER PRIMARY KEY CHECK (id = 1),
+     sex TEXT,
+     age INTEGER,
+     bodyweight REAL
+ )
+ """)
+
  conn.commit()
  conn.close()
 
 
 #שמירת אימון שלם . מקבל תאריך , סוג , ורשימת תרגילים במבנה מקונן :
-#exercises_data = [ {'name': 'סקוואט', 'sets': [ {'reps': 5, 'weight': 120}, ... ]}, ... ]
 def save_workout(date, workout_type, exercises_data):
  conn = get_connection()
  cursor = conn.cursor()
@@ -172,9 +180,72 @@ def delete_workout(workout_id):
  conn.close()
 
 
-#שליפת כל שמות התרגילים שהוזנו אי פעם . לרשימה הדינמית בטופס
+#שליפת כל שמות התרגילים שהוזנו אי פעם . לרשימה הדינמית בטופס ביומן
 def get_all_exercise_names():
  conn = get_connection()
  rows = conn.execute("SELECT DISTINCT name FROM exercises ORDER BY name").fetchall()
  conn.close()
  return [row['name'] for row in rows]
+
+
+#שמירת פרופיל המשתמש . פעם ראשונה = הכנסה חדשה , בפעם הבאה = עדכון אותה שורה
+#זה נקרא upsert - INSERT שהופך ל-UPDATE אם השורה כבר קיימת (בזכות ON CONFLICT)
+def save_profile(sex, age, bodyweight):
+ conn = get_connection()
+ conn.execute("""
+     INSERT INTO profile (id, sex, age, bodyweight) VALUES (1, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET sex=excluded.sex, age=excluded.age, bodyweight=excluded.bodyweight
+ """, (sex, age, bodyweight))
+ conn.commit()
+ conn.close()
+
+
+#שליפת פרופיל המשתמש . מחזיר מילון עם המידע , או None אם עדיין לא נשמר פרופיל בכלל
+def get_profile():
+ conn = get_connection()
+ row = conn.execute("SELECT sex, age, bodyweight FROM profile WHERE id = 1").fetchone()
+ conn.close()
+ if row is None:
+     return None
+ return dict(row)
+
+
+#בדיקה עצמית . רץ רק כשמריצים את הקובץ ישירות ולא באימפורט
+if __name__ == '__main__':
+    print("יוצר טבלאות...")
+    init_db()
+
+    print("שומר אימון לדוגמה...")
+    test_workout = [
+        {'name': 'סקוואט', 'sets': [{'reps': 5, 'weight': 100}, {'reps': 5, 'weight': 110}]},
+        {'name': 'לחיצת רגליים', 'sets': [{'reps': 10, 'weight': 180}]},
+    ]
+    workout_id = save_workout('2026-07-14', 'רגליים', test_workout)
+    print(f"נשמר אימון עם id={workout_id}")
+
+    print("\nכל האימונים:")
+    for w in get_all_workouts():
+        print(f"  {w['id']} | {w['date']} | {w['workout_type']}")
+
+    print("\nפרטי האימון שנשמר:")
+    details = get_workout_details(workout_id)
+    for ex in details['exercises']:
+        print(f"  {ex['name']}: {ex['sets']}")
+
+    print("\nהיסטוריית סקוואט:")
+    for row in get_exercise_history('סקוואט'):
+        print(f"  {row['date']} | {row['reps']} חזרות | {row['weight']} קג")
+
+    print("\nמוחק את אימון הבדיקה...")
+    delete_workout(workout_id)
+    print(f"נשארו {len(get_all_workouts())} אימונים")
+
+    print("\nבודק פרופיל...")
+    print(f"פרופיל לפני שמירה: {get_profile()}")
+    save_profile('זכר', 25, 80.0)
+    print(f"פרופיל אחרי שמירה: {get_profile()}")
+    save_profile('זכר', 26, 82.0)
+    print(f"פרופיל אחרי עדכון: {get_profile()}")
+
+    print("\nהכל עובד!")
+

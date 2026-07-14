@@ -3,22 +3,28 @@
 
 import anthropic
 import os
-from dotenv import load_dotenv
 import pickle
 import chromadb
 chroma_client = chromadb.Client()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 collection = chroma_client.get_or_create_collection("powerlifting_clusters")
+from dotenv import dotenv_values
+config = dotenv_values(os.path.join(BASE_DIR, '.env'))
 
+from langfuse import Langfuse, observe
+from opentelemetry.instrumentation.anthropic import AnthropicInstrumentor
+
+langfuse = Langfuse(
+    public_key=config.get("LANGFUSE_PUBLIC_KEY"),
+    secret_key=config.get("LANGFUSE_SECRET_KEY"),
+    host="https://cloud.langfuse.com",
+)
+AnthropicInstrumentor().instrument()
+
+client = anthropic.Anthropic(api_key=config.get("ANTHROPIC_API_KEY"))
 
 documents = []
 ids = []
-
-
-load_dotenv(os.path.join(BASE_DIR, '.env'))
-
-client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-
 
 with open(os.path.join(BASE_DIR, 'cluster_model', 'cluster_model_list.pkl'), 'rb') as f:
  all_cluster_models = pickle.load(f)
@@ -120,6 +126,7 @@ def class_user_predict(lift_column,sex,Age,BodyweightKg,lift_value):
 
 
 #פונקציית שאלת הסוכן classification
+@observe()
 def ask_agent_classifiation(lift_column,sex,Age,BodyweightKg,lift_value):
  if Age is None:
      return "כדי לבצע ניתוח מדויק צריך את הגיל שלך - מה גילך?"
@@ -185,6 +192,7 @@ def cluster_user(lift_column,sex,Age,BodyweightKg,lift_value):
 
 
 #פונקציית שאלת הסוכן cluster
+@observe()
 def ask_agent_cluster(user_query,lift_column,sex,Age,BodyweightKg,lift_value):
  if Age is None:
      return "כדי לבצע ניתוח מדויק צריך את הגיל שלך - מה גילך?"
@@ -263,7 +271,7 @@ tools = [
 
 
 ##פונקציה שמאחדת את שתי הסוכנים ##
-
+@observe()
 def ask_full_agent(user_query): 
  #בניית פרומפט
  prompt = f"""אתה מנתח אימוני פאוורליפטינג. 
