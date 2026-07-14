@@ -1,8 +1,16 @@
-
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
+import sys, os
+
+#הוספת תיקיית BACK ל-sys.path . הקובץ הזה ב-FRONT/pages , שתי רמות מעל זה myapp
+PAGE_DIR = os.path.dirname(os.path.abspath(__file__))
+FRONT_DIR = os.path.dirname(PAGE_DIR)
+APP_ROOT = os.path.dirname(FRONT_DIR)
+BACK_DIR = os.path.join(APP_ROOT, 'BACK')
+sys.path.append(BACK_DIR)
+
 import database
 from agent import ask_full_agent
 
