@@ -6,7 +6,10 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report
 
-path = r'C:\Users\yuval\OneDrive - Shoham Schools\שולחן העבודה\AI\myapp\AGENT_data'
+import os
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(SCRIPT_DIR)
+path = os.path.join(BASE_DIR, 'AGENT_data')
 
 
 df = pd.read_csv(path + r'\cleaned_openpowerlifting.csv', low_memory=False)
@@ -96,10 +99,10 @@ def analayze_classafication_model(data,lift_column,sex):
  #הרצת מודל על המשתנים 
  X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
 
- #הרצת מודל סט אימון
- model = RandomForestClassifier(random_state=42)
+ #max_depth=12 נבחר לפי ניסוי שבדק דיוק מול גודל קובץ (ראה max_depth_results.txt)
+ #שומר על רוב הדיוק (הפסד ~2.5 נק' בממוצע) תמורת קובץ קטן פי 4
+ model = RandomForestClassifier(max_depth=12, random_state=42)
  model.fit(X_train, y_train)
- 
 
  
  y_pred = model.predict(X_test)
@@ -155,7 +158,8 @@ models_only = {key: all_models[key]['model'] for key in all_models}
 
 
 #יצירת קובץ עם רשימת המודלים
-with open('classification_model_list.pkl', 'wb') as f:
+with open(os.path.join(SCRIPT_DIR, 'classification_model_list.pkl'), 'wb') as f:
     pickle.dump(models_only, f)
+ 
 
  
