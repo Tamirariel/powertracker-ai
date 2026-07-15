@@ -3,6 +3,7 @@ import streamlit as st
 from datetime import date
 import calendar
 import sys, os
+from auth import check_password
 
 #הוספת תיקיית BACK ל-sys.path כדי שאפשר לייבא ממנה . FRONT ו-BACK הן תיקיות אחיות
 FRONT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -14,14 +15,13 @@ import database
 #יצירת הטבלאות אם לא קיימות . בטוח להריץ בכל עליית עמוד
 database.init_db()
 
-
 #הגדרות עמוד
 st.set_page_config(
     page_title="יומן אימונים",
     page_icon="📋",
     layout="centered",
 )
-
+check_password()
 
 #יישור לימין - כל האפליקציה בעברית
 st.markdown("""

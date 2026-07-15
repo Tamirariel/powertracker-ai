@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
 import sys, os
-
+from auth import check_password
 #הוספת תיקיית BACK ל-sys.path . הקובץ הזה ב-FRONT/pages , שתי רמות מעל זה myapp
 PAGE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONT_DIR = os.path.dirname(PAGE_DIR)
@@ -23,7 +23,7 @@ st.set_page_config(
     page_icon="🏋️",
     layout="centered",
 )
-
+check_password()
 
 #יישור לימין - כל האפליקציה בעברית
 st.markdown("""
