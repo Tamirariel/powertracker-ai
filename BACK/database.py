@@ -8,9 +8,16 @@ from dotenv import dotenv_values
 #התיקייה שבה הסקריפט הזה יושב (BACK)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+
+#פונקציית עזר . מחפשת קודם בקובץ .env (מקומי) , ואם לא נמצא - במשתני הסביבה האמיתיים (Railway)
+def get_env(key):
+    return config.get(key) or os.environ.get(key)
+
+
+
 #קריאת כתובת החיבור מה-.env . אותה שיטה שכבר עובדת ב-agent.py
 config = dotenv_values(os.path.join(BASE_DIR, '.env'))
-DATABASE_URL = config.get('DATABASE_URL')
+DATABASE_URL = get_env('DATABASE_URL')
 
 
 #פתיחת חיבור למסד הנתונים . כל פונקציה פותחת וסוגרת חיבור משלה - בדיוק כמו בגרסת הSQLite

@@ -5,23 +5,32 @@ import anthropic
 import os
 import pickle
 import chromadb
+from langfuse import Langfuse, observe
+from opentelemetry.instrumentation.anthropic import AnthropicInstrumentor
+from dotenv import dotenv_values
+
+
 chroma_client = chromadb.Client()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 collection = chroma_client.get_or_create_collection("powerlifting_clusters")
-from dotenv import dotenv_values
+
+
+
 config = dotenv_values(os.path.join(BASE_DIR, '.env'))
 
-from langfuse import Langfuse, observe
-from opentelemetry.instrumentation.anthropic import AnthropicInstrumentor
+#פונקציית עזר . מחפשת קודם בקובץ .env (מקומי) , ואם לא נמצא - במשתני הסביבה האמיתיים (Railway)
+def get_env(key):
+    return config.get(key) or os.environ.get(key)
+
 
 langfuse = Langfuse(
-    public_key=config.get("LANGFUSE_PUBLIC_KEY"),
-    secret_key=config.get("LANGFUSE_SECRET_KEY"),
+    public_key=get_env("LANGFUSE_PUBLIC_KEY"),
+    secret_key=get_env("LANGFUSE_SECRET_KEY"),
     host="https://cloud.langfuse.com",
 )
 AnthropicInstrumentor().instrument()
 
-client = anthropic.Anthropic(api_key=config.get("ANTHROPIC_API_KEY"))
+client = anthropic.Anthropic(api_key=get_env("ANTHROPIC_API_KEY"))
 
 documents = []
 ids = []
