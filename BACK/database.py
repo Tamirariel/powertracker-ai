@@ -1,58 +1,57 @@
 #קובץ הדטא של הפרויקט . שומר אימונים , בניית האימונים הבאים 
 
-import sqlite3
+import psycopg2
+from psycopg2.extras import RealDictCursor
 import os
+from dotenv import dotenv_values
 
-#התיקייה שבה הסקריפט הזה יושב (myapp)
+#התיקייה שבה הסקריפט הזה יושב (BACK)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, 'powertracker.db')
+
+#קריאת כתובת החיבור מה-.env . אותה שיטה שכבר עובדת ב-agent.py
+config = dotenv_values(os.path.join(BASE_DIR, '.env'))
+DATABASE_URL = config.get('DATABASE_URL')
 
 
-#פתיחת חיבור למסד הנתונים . כל פונקציה פותחת וסוגרת חיבור משלה
+#פתיחת חיבור למסד הנתונים . כל פונקציה פותחת וסוגרת חיבור משלה - בדיוק כמו בגרסת הSQLite
 def get_connection():
- conn = sqlite3.connect(DB_PATH)
- #מאפשר גישה לעמודות לפי שם ולא רק לפי מיקום
- conn.row_factory = sqlite3.Row
- #אכיפת מפתחות זרים . בsqlite זה כבוי כברירת מחדל
- conn.execute("PRAGMA foreign_keys = ON")
+ conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
  return conn
 
 
 #יצירת כל הטבלאות אם הן לא קיימות . רץ בכל עליית אפליקציה
 def init_db():
  conn = get_connection()
+ cursor = conn.cursor()
 
- conn.execute("""
+ cursor.execute("""
  CREATE TABLE IF NOT EXISTS workouts (
-     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     id SERIAL PRIMARY KEY,
      date TEXT NOT NULL,
      workout_type TEXT NOT NULL
  )
  """)
 
- conn.execute("""
+ cursor.execute("""
  CREATE TABLE IF NOT EXISTS exercises (
-     id INTEGER PRIMARY KEY AUTOINCREMENT,
-     workout_id INTEGER NOT NULL,
-     name TEXT NOT NULL,
-     FOREIGN KEY (workout_id) REFERENCES workouts(id) ON DELETE CASCADE
+     id SERIAL PRIMARY KEY,
+     workout_id INTEGER NOT NULL REFERENCES workouts(id) ON DELETE CASCADE,
+     name TEXT NOT NULL
  )
  """)
 
- conn.execute("""
+ cursor.execute("""
  CREATE TABLE IF NOT EXISTS sets (
-     id INTEGER PRIMARY KEY AUTOINCREMENT,
-     exercise_id INTEGER NOT NULL,
+     id SERIAL PRIMARY KEY,
+     exercise_id INTEGER NOT NULL REFERENCES exercises(id) ON DELETE CASCADE,
      set_number INTEGER NOT NULL,
      reps INTEGER NOT NULL,
-     weight REAL NOT NULL,
-     FOREIGN KEY (exercise_id) REFERENCES exercises(id) ON DELETE CASCADE
+     weight REAL NOT NULL
  )
  """)
 
  #טבלת הפרופיל . בכוונה יש בה תמיד רק שורה אחת (id=1) כי יש רק פרופיל אחד - אני
- #ה-CHECK מונע הכנסת שורה עם id אחר בטעות
- conn.execute("""
+ cursor.execute("""
  CREATE TABLE IF NOT EXISTS profile (
      id INTEGER PRIMARY KEY CHECK (id = 1),
      sex TEXT,
@@ -62,36 +61,39 @@ def init_db():
  """)
 
  conn.commit()
+ cursor.close()
  conn.close()
 
 
 #שמירת אימון שלם . מקבל תאריך , סוג , ורשימת תרגילים במבנה מקונן :
+#exercises_data = [ {'name': 'סקוואט', 'sets': [ {'reps': 5, 'weight': 120}, ... ]}, ... ]
 def save_workout(date, workout_type, exercises_data):
  conn = get_connection()
  cursor = conn.cursor()
 
- #שמירת האימון וקבלת הid שלו
+ #שמירת האימון וקבלת הid שלו . בPostgres צריך RETURNING id כי אין lastrowid
  cursor.execute(
-     "INSERT INTO workouts (date, workout_type) VALUES (?, ?)",
+     "INSERT INTO workouts (date, workout_type) VALUES (%s, %s) RETURNING id",
      (date, workout_type)
  )
- workout_id = cursor.lastrowid
+ workout_id = cursor.fetchone()['id']
 
  #שמירת כל תרגיל והסטים שלו
  for exercise in exercises_data:
      cursor.execute(
-         "INSERT INTO exercises (workout_id, name) VALUES (?, ?)",
+         "INSERT INTO exercises (workout_id, name) VALUES (%s, %s) RETURNING id",
          (workout_id, exercise['name'])
      )
-     exercise_id = cursor.lastrowid
+     exercise_id = cursor.fetchone()['id']
 
      for i, s in enumerate(exercise['sets'], start=1):
          cursor.execute(
-             "INSERT INTO sets (exercise_id, set_number, reps, weight) VALUES (?, ?, ?, ?)",
+             "INSERT INTO sets (exercise_id, set_number, reps, weight) VALUES (%s, %s, %s, %s)",
              (exercise_id, i, s['reps'], s['weight'])
          )
 
  conn.commit()
+ cursor.close()
  conn.close()
  return workout_id
 
@@ -99,9 +101,12 @@ def save_workout(date, workout_type, exercises_data):
 #שליפת רשימת כל האימונים . מהחדש לישן
 def get_all_workouts():
  conn = get_connection()
- rows = conn.execute(
+ cursor = conn.cursor()
+ cursor.execute(
      "SELECT id, date, workout_type FROM workouts ORDER BY date DESC, id DESC"
- ).fetchall()
+ )
+ rows = cursor.fetchall()
+ cursor.close()
  conn.close()
  return [dict(row) for row in rows]
 
@@ -109,35 +114,41 @@ def get_all_workouts():
 #שליפת אימון שלם לפי id . מחזיר את אותו מבנה מקונן כמו בשמירה
 def get_workout_details(workout_id):
  conn = get_connection()
+ cursor = conn.cursor()
 
- workout = conn.execute(
-     "SELECT id, date, workout_type FROM workouts WHERE id = ?",
+ cursor.execute(
+     "SELECT id, date, workout_type FROM workouts WHERE id = %s",
      (workout_id,)
- ).fetchone()
+ )
+ workout = cursor.fetchone()
 
  if workout is None:
+     cursor.close()
      conn.close()
      return None
 
  result = dict(workout)
  result['exercises'] = []
 
- exercises = conn.execute(
-     "SELECT id, name FROM exercises WHERE workout_id = ? ORDER BY id",
+ cursor.execute(
+     "SELECT id, name FROM exercises WHERE workout_id = %s ORDER BY id",
      (workout_id,)
- ).fetchall()
+ )
+ exercises = cursor.fetchall()
 
  for exercise in exercises:
-     sets = conn.execute(
-         "SELECT set_number, reps, weight FROM sets WHERE exercise_id = ? ORDER BY set_number",
+     cursor.execute(
+         "SELECT set_number, reps, weight FROM sets WHERE exercise_id = %s ORDER BY set_number",
          (exercise['id'],)
-     ).fetchall()
+     )
+     sets = cursor.fetchall()
 
      result['exercises'].append({
          'name': exercise['name'],
          'sets': [{'reps': s['reps'], 'weight': s['weight']} for s in sets]
      })
 
+ cursor.close()
  conn.close()
  return result
 
@@ -145,10 +156,13 @@ def get_workout_details(workout_id):
 #שליפת האימון האחרון מסוג מסוים . בשביל פיצר השכפול
 def get_last_workout_by_type(workout_type):
  conn = get_connection()
- row = conn.execute(
-     "SELECT id FROM workouts WHERE workout_type = ? ORDER BY date DESC, id DESC LIMIT 1",
+ cursor = conn.cursor()
+ cursor.execute(
+     "SELECT id FROM workouts WHERE workout_type = %s ORDER BY date DESC, id DESC LIMIT 1",
      (workout_type,)
- ).fetchone()
+ )
+ row = cursor.fetchone()
+ cursor.close()
  conn.close()
 
  if row is None:
@@ -160,14 +174,17 @@ def get_last_workout_by_type(workout_type):
 #מחזיר שורות של : תאריך , חזרות , משקל
 def get_exercise_history(exercise_name):
  conn = get_connection()
- rows = conn.execute("""
+ cursor = conn.cursor()
+ cursor.execute("""
      SELECT w.date, s.reps, s.weight
      FROM sets s
      JOIN exercises e ON s.exercise_id = e.id
      JOIN workouts w ON e.workout_id = w.id
-     WHERE e.name = ?
-     ORDER BY w.date
- """, (exercise_name,)).fetchall()
+     WHERE e.name = %s
+     ORDER BY w.date, s.set_number
+ """, (exercise_name,))
+ rows = cursor.fetchall()
+ cursor.close()
  conn.close()
  return [dict(row) for row in rows]
 
@@ -175,35 +192,44 @@ def get_exercise_history(exercise_name):
 #מחיקת אימון שלם . הCASCADE מוחק אוטומטית גם את התרגילים והסטים שלו
 def delete_workout(workout_id):
  conn = get_connection()
- conn.execute("DELETE FROM workouts WHERE id = ?", (workout_id,))
+ cursor = conn.cursor()
+ cursor.execute("DELETE FROM workouts WHERE id = %s", (workout_id,))
  conn.commit()
+ cursor.close()
  conn.close()
 
 
 #שליפת כל שמות התרגילים שהוזנו אי פעם . לרשימה הדינמית בטופס ביומן
 def get_all_exercise_names():
  conn = get_connection()
- rows = conn.execute("SELECT DISTINCT name FROM exercises ORDER BY name").fetchall()
+ cursor = conn.cursor()
+ cursor.execute("SELECT DISTINCT name FROM exercises ORDER BY name")
+ rows = cursor.fetchall()
+ cursor.close()
  conn.close()
  return [row['name'] for row in rows]
 
 
-#שמירת פרופיל המשתמש . פעם ראשונה = הכנסה חדשה , בפעם הבאה = עדכון אותה שורה
-#זה נקרא upsert - INSERT שהופך ל-UPDATE אם השורה כבר קיימת (בזכות ON CONFLICT)
+#שמירת פרופיל המשתמש . פעם ראשונה = הכנסה חדשה , בפעם הבאה = עדכון אותה שורה (upsert)
 def save_profile(sex, age, bodyweight):
  conn = get_connection()
- conn.execute("""
-     INSERT INTO profile (id, sex, age, bodyweight) VALUES (1, ?, ?, ?)
-     ON CONFLICT(id) DO UPDATE SET sex=excluded.sex, age=excluded.age, bodyweight=excluded.bodyweight
+ cursor = conn.cursor()
+ cursor.execute("""
+     INSERT INTO profile (id, sex, age, bodyweight) VALUES (1, %s, %s, %s)
+     ON CONFLICT (id) DO UPDATE SET sex=excluded.sex, age=excluded.age, bodyweight=excluded.bodyweight
  """, (sex, age, bodyweight))
  conn.commit()
+ cursor.close()
  conn.close()
 
 
 #שליפת פרופיל המשתמש . מחזיר מילון עם המידע , או None אם עדיין לא נשמר פרופיל בכלל
 def get_profile():
  conn = get_connection()
- row = conn.execute("SELECT sex, age, bodyweight FROM profile WHERE id = 1").fetchone()
+ cursor = conn.cursor()
+ cursor.execute("SELECT sex, age, bodyweight FROM profile WHERE id = 1")
+ row = cursor.fetchone()
+ cursor.close()
  conn.close()
  if row is None:
      return None
@@ -212,6 +238,7 @@ def get_profile():
 
 #בדיקה עצמית . רץ רק כשמריצים את הקובץ ישירות ולא באימפורט
 if __name__ == '__main__':
+    print("מתחבר ל-Postgres...")
     print("יוצר טבלאות...")
     init_db()
 
@@ -247,5 +274,4 @@ if __name__ == '__main__':
     save_profile('זכר', 26, 82.0)
     print(f"פרופיל אחרי עדכון: {get_profile()}")
 
-    print("\nהכל עובד!")
-
+    print("\nהכל עובד! מחובר בהצלחה לPostgres בענן")
