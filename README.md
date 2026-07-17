@@ -4,7 +4,7 @@
 
 ![License](https://img.shields.io/badge/license-MIT-green) ![Status](https://img.shields.io/badge/status-active-brightgreen) ![Python](https://img.shields.io/badge/Python-3.11+-blue) ![Streamlit](https://img.shields.io/badge/Streamlit-1.59-FF4B4B)
 
-> 🔗 **דמו חי:** [https://powertracker-ai-production.up.railway.app/](https://your-app.up.railway.app) *(הכניסה מוגנת בסיסמה - פנו אליי לקבלת גישה)*
+> 🔗 **דמו חי:** [powertracker-ai-production.up.railway.app](https://powertracker-ai-production.up.railway.app/) *(הכניסה מוגנת בסיסמה - פנו אליי לקבלת גישה)*
 
 ---
 
