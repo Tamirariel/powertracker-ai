@@ -1,6 +1,6 @@
-"use client";
-import { useState } from "react";
 
+"use client";
+import { useState, useEffect } from "react";
 export default function Home() {
   const [result, setResult] = useState("טרם נבדק");
 
