@@ -1,8 +1,9 @@
 "use client";
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 type Msg = { role: "user" | "assistant"; content: string };
-
 export default function ChatPage() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
@@ -51,7 +52,13 @@ export default function ChatPage() {
             <div className="mb-1 text-xs text-gray-500">
               {m.role === "user" ? "אתה" : "PowerTracker"}
             </div>
-            <div className="whitespace-pre-wrap">{m.content}</div>
+            {m.role === "assistant" ? (
+             <div className="prose prose-sm max-w-none">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+             </div>
+                 ) : (
+             <div className="whitespace-pre-wrap">{m.content}</div>
+             )}
           </div>
         ))}
         {loading && <div className="animate-pulse text-sm text-gray-500">בודק את הנתונים...</div>}
