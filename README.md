@@ -2,7 +2,7 @@
 
 **PowerTracker AI** היא אפליקציית מעקב אימוני כוח המשלבת יומן אימונים אישי עם **סוכן AI מבוסס Claude** שמנתח את הביצועים שלך ומשווה אותם לנתוני אמת של מעל מיליון תוצאות תחרות מדאטהסט [OpenPowerlifting](https://www.openpowerlifting.org/), באמצעות מודלי **Machine Learning** (KMeans, Random Forest) ו-**RAG** על ChromaDB.
 
-![License](https://img.shields.io/badge/license-MIT-green) ![Status](https://img.shields.io/badge/status-active-brightgreen) ![Python](https://img.shields.io/badge/Python-3.11+-blue) ![Streamlit](https://img.shields.io/badge/Streamlit-1.59-FF4B4B)
+ ![Status](https://img.shields.io/badge/status-active-brightgreen) ![Python](https://img.shields.io/badge/Python-3.11+-blue) ![Streamlit](https://img.shields.io/badge/Streamlit-1.59-FF4B4B)
 
 > 🔗 **דמו חי:** [powertracker-ai-production.up.railway.app](https://powertracker-ai-production.up.railway.app/) *(הכניסה מוגנת בסיסמה - פנו אליי לקבלת גישה)*
 

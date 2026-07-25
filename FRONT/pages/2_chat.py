@@ -11,8 +11,8 @@ BACK_DIR = os.path.join(APP_ROOT, 'BACK')
 sys.path.append(BACK_DIR)
 
 import database
-from agent import ask_full_agent
-from agent import langfuse as lf
+import requests
+API_URL = "http://localhost:8000"
 database.init_db()
 
 
@@ -131,7 +131,14 @@ if question:
     #קריאה לסוכן עם חיווי המתנה
     with st.chat_message("assistant"):
         with st.spinner("בודק את הנתונים..."):
-            answer = ask_full_agent(full_question)
+            try:
+                res = requests.post(
+                    f"{API_URL}/chat",
+                    json={"question": full_question},
+                    timeout=120,
+                )
+                res.raise_for_status()
+                answer = res.json()["answer"]
+            except requests.exceptions.RequestException as e:
+                answer = f"שגיאה בחיבור לשרת: {e}"
         st.markdown(answer)
-        lf.flush()
-    st.session_state.messages.append({"role": "assistant", "content": answer})
