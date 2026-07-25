@@ -1,19 +1,10 @@
-#עמוד הצאט . שיח עם הסוכן 
+#עמוד הצאט . שיח עם הסוכן
 
 import streamlit as st
-import sys, os
-from auth import check_password
-#הוספת תיקיית BACK ל-sys.path . הקובץ הזה ב-FRONT/pages , שתי רמות מעל זה myapp
-PAGE_DIR = os.path.dirname(os.path.abspath(__file__))
-FRONT_DIR = os.path.dirname(PAGE_DIR)
-APP_ROOT = os.path.dirname(FRONT_DIR)
-BACK_DIR = os.path.join(APP_ROOT, 'BACK')
-sys.path.append(BACK_DIR)
-
-import database
 import requests
+from auth import check_password
+
 API_URL = "http://localhost:8000"
-database.init_db()
 
 
 #הגדרות עמוד
@@ -41,30 +32,11 @@ if "messages" not in st.session_state:
 
 #פרופיל משותף עם שאר העמודים . בפעם הראשונה בסשן טוענים מה-DB במקום להתחיל ריק
 if "profile" not in st.session_state:
-    saved_profile = database.get_profile()
-    if saved_profile is not None:
-        st.session_state.profile = saved_profile
-    else:
+    try:
+        st.session_state.profile = requests.get(f"{API_URL}/profile", timeout=10).json()
+    except requests.exceptions.RequestException:
         st.session_state.profile = {"sex": None, "age": None, "bodyweight": None}
 
-
-#בניית תמצית מהיומן . שלושת האימונים האחרונים עם התרגילים שלהם
-#הסוכן מקבל את זה בהקשר כדי לענות על שאלות כמו "מה עשיתי באימון האחרון"
-def build_journal_summary():
- workouts = database.get_all_workouts()
- if not workouts:
-     return None
-
- lines = []
- for w in workouts[:3]:
-     details = database.get_workout_details(w['id'])
-     exercises_text = " , ".join(
-         f"{ex['name']} ({len(ex['sets'])} סטים , שיא {max(s['weight'] for s in ex['sets'])} קג)"
-         for ex in details['exercises']
-     )
-     lines.append(f"{w['date']} אימון {w['workout_type']}: {exercises_text}")
-
- return " | ".join(lines)
 
 
 #סרגל צד . פרופיל בלבד - היומן עבר לעמוד הראשי
@@ -86,7 +58,11 @@ with st.sidebar:
         else:
             st.session_state.profile = {"sex": sex, "age": age, "bodyweight": bodyweight}
             #שמירה גם לDB - כדי שהפרופיל ישרוד סגירת דפדפן
-            database.save_profile(sex, age, bodyweight)
+            requests.post(
+                f"{API_URL}/profile",
+                json={"sex": sex, "age": age, "bodyweight": bodyweight},
+                timeout=10,
+            )
             st.success("הפרופיל נשמר")
 
 
@@ -103,38 +79,16 @@ for msg in st.session_state.messages:
 question = st.chat_input("לדוגמה: מה עשיתי באימון האחרון? או: אני מרים 140 בסקוואט , כמה אני ביחס לאחרים?")
 
 if question:
-    #בניית הקשר מהפרופיל ומהיומן כדי שהסוכן ידע עם מי הוא מדבר
-    p = st.session_state.profile
-    context_parts = []
-    if p["sex"] is not None:
-        context_parts.append(f"מגדר: {'גבר' if p['sex'] == 'זכר' else 'אישה'}")
-    if p["age"] is not None:
-        context_parts.append(f"גיל: {p['age']}")
-    if p["bodyweight"] is not None:
-        context_parts.append(f"משקל גוף: {p['bodyweight']} קג")
-
-    journal_summary = build_journal_summary()
-    if journal_summary is not None:
-        context_parts.append(f"אימונים אחרונים מהיומן: {journal_summary}")
-
-    #אם יש הקשר - מצרפים אותו לשאלה
-    if context_parts:
-        full_question = f"[נתוני המשתמש: {' | '.join(context_parts)}] {question}"
-    else:
-        full_question = question
-
-    #הצגת הודעת המשתמש ושמירה בהיסטוריה
     with st.chat_message("user"):
         st.markdown(question)
     st.session_state.messages.append({"role": "user", "content": question})
 
-    #קריאה לסוכן עם חיווי המתנה
     with st.chat_message("assistant"):
         with st.spinner("בודק את הנתונים..."):
             try:
                 res = requests.post(
                     f"{API_URL}/chat",
-                    json={"question": full_question},
+                    json={"question": question},
                     timeout=120,
                 )
                 res.raise_for_status()
@@ -142,3 +96,5 @@ if question:
             except requests.exceptions.RequestException as e:
                 answer = f"שגיאה בחיבור לשרת: {e}"
         st.markdown(answer)
+
+    st.session_state.messages.append({"role": "assistant", "content": answer})
