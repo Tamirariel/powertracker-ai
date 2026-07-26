@@ -63,6 +63,7 @@ export default function JournalPage() {
   const [customName, setCustomName] = useState("");
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
+  const [lastWorkout, setLastWorkout] = useState<Workout | null>(null);
 
   const loadWorkouts = useCallback(() => {
     fetch(`${API}/workouts/full`)
@@ -74,13 +75,30 @@ export default function JournalPage() {
       .catch(e => setError(String(e)));
   }, []);
 
-  useEffect(() => {
-    loadWorkouts();
+  const loadNames = useCallback(() => {
     fetch(`${API}/exercises/names`)
       .then(res => res.json())
       .then(setNames)
       .catch(() => {});
-  }, [loadWorkouts]);
+  }, []);
+
+  // האימון האחרון מהסוג הנבחר . 404 הוא תשובה תקינה - אין אימון כזה
+  const loadLast = useCallback((type: string) => {
+    fetch(`${API}/workouts/last/${encodeURIComponent(type)}`)
+      .then(res => (res.ok ? res.json() : null))
+      .then(setLastWorkout)
+      .catch(() => setLastWorkout(null));
+  }, []);
+
+  useEffect(() => {
+    loadWorkouts();
+    loadNames();
+  }, [loadWorkouts, loadNames]);
+
+  // נטען מחדש בכל שינוי סוג אימון
+  useEffect(() => {
+    loadLast(wType);
+  }, [wType, loadLast]);
 
   // איחוד הרשימה הבסיסית עם תרגילים שהוזנו ידנית בעבר
   const exerciseList = [
@@ -103,6 +121,25 @@ export default function JournalPage() {
     if (draft.length === 0) setStartedDate(wDate);
     setDraft(prev => [...prev, { name, sets: [], numSets: 1, reps: 8, weight: 50 }]);
     setCustomName("");
+    setNotice("");
+  }
+
+  function duplicateLast() {
+    if (!lastWorkout) return;
+    if (draft.length > 0) {
+      setNotice("יש כבר תרגילים בטופס . נקה קודם אם אתה רוצה לשכפל");
+      return;
+    }
+    setStartedDate(wDate);
+    setDraft(
+      lastWorkout.exercises.map(ex => ({
+        name: ex.name,
+        sets: ex.sets.map(s => ({ ...s })),   // עותק ולא הפניה לאובייקטים המקוריים
+        numSets: 1,
+        reps: 8,
+        weight: 50,
+      }))
+    );
     setNotice("");
   }
 
@@ -152,11 +189,24 @@ export default function JournalPage() {
       clearForm();
       setNotice("האימון נשמר!");
       loadWorkouts();
-      fetch(`${API}/exercises/names`).then(r => r.json()).then(setNames).catch(() => {});
+      loadNames();
+      loadLast(wType);   // כדי שכפתור השכפול יציע את החדש ולא את הקודם
     } catch (e) {
       setNotice(`שגיאה בשמירה: ${e}`);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function deleteWorkout(id: number) {
+    try {
+      const res = await fetch(`${API}/workouts/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error(`שגיאה ${res.status}`);
+      setSelected(null);
+      loadWorkouts();
+      loadLast(wType);
+    } catch (e) {
+      setError(`שגיאה במחיקה: ${e}`);
     }
   }
 
@@ -218,6 +268,15 @@ export default function JournalPage() {
         </p>
       )}
 
+      {lastWorkout && (
+        <button
+          onClick={duplicateLast}
+          className="mt-3 w-full rounded-lg bg-white/10 px-4 py-2 text-sm"
+        >
+          שכפל את אימון ה{wType} מ-{lastWorkout.date}
+        </button>
+      )}
+
       {/* הוספת תרגיל */}
       <div className="mt-4 flex gap-2">
         <select
@@ -241,7 +300,7 @@ export default function JournalPage() {
       </div>
 
       {/* התרגילים בטיוטה - האחרון שנוסף מוצג ראשון */}
-      {draft.map((ex, i) => i).reverse().map(i => {
+      {draft.map((_, i) => i).reverse().map(i => {
         const ex = draft[i];
         return (
           <div key={i} className="mt-4 rounded-lg border border-white/10 p-4">
@@ -384,6 +443,13 @@ export default function JournalPage() {
                     {ex.sets.map(s => `${s.reps}×${s.weight}`).join(" , ")}
                   </p>
                 ))}
+
+                <button
+                  onClick={() => deleteWorkout(w.id)}
+                  className="mt-3 text-sm text-white/50 hover:text-red-400"
+                >
+                  מחק אימון
+                </button>
               </div>
             ))
           )}
