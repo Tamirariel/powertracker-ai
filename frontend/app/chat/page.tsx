@@ -16,7 +16,7 @@ export default function ChatPage() {
   const [saveMsg, setSaveMsg] = useState("");
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/profile`)
+    fetch(`${API}/profile`)
       .then(res => res.json())
       .then(setProfile)
       .catch(() => {});
@@ -28,7 +28,7 @@ export default function ChatPage() {
       return;
     }
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/profile`, {
+      await fetch(`${API}/profile`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(profile),
@@ -49,7 +49,7 @@ export default function ChatPage() {
     setLoading(true);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat`, {
+      const res = await fetch(`${API}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question }),

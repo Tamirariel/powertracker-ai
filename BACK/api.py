@@ -1,20 +1,29 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
-from agent import ask_full_agent, langfuse
-import database
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from typing import List
-from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from agent import ask_full_agent, langfuse, get_env
+import database
 import powerlifting
+
+API_KEY = get_env("API_KEY")
+
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+#כל בקשה חייבת לשאת את המפתח . הפרונט מוסיף אותו בשרת , הדפדפן לא רואה אותו
+@app.middleware("http")
+async def require_api_key(request: Request, call_next):
+    open_paths = ("/health", "/docs", "/openapi.json")
+    if request.url.path in open_paths:
+        return await call_next(request)
+
+    if not API_KEY:
+        return JSONResponse({"detail": "API_KEY לא הוגדר בשרת"}, status_code=500)
+
+    if request.headers.get("X-API-Key") != API_KEY:
+        return JSONResponse({"detail": "לא מורשה"}, status_code=401)
+
+    return await call_next(request)
 
 database.init_db()
 
@@ -102,14 +111,13 @@ class SetIn(BaseModel):
 
 class ExerciseIn(BaseModel):
     name: str
-    sets: List[SetIn]
+    sets: list[SetIn]
 
 
 class WorkoutIn(BaseModel):
     date: str
     workout_type: str
-    exercises: List[ExerciseIn]
-
+    exercises: list[ExerciseIn]
 
 @app.get("/workouts")
 def list_workouts():
