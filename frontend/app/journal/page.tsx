@@ -32,7 +32,7 @@ const TYPE_COLORS: Record<string, string> = {
   "גוף מלא": "#F472B6",
 };
 
-const API = process.env.NEXT_PUBLIC_API_URL;
+const API = "/api/backend";
 
 // YYYY-MM-DD בזמן מקומי. toISOString היה מזיז יום אחורה בגלל UTC
 function dateKey(year: number, month: number, day: number) {

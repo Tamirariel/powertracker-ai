@@ -9,7 +9,7 @@ type Lift = { name: string; best_1rm: number | null; slope: number | null; point
 type Progress = { lifts: Lift[]; total: number | null };
 type Profile = { sex: string | null; age: number | null; bodyweight: number | null };
 
-const API = process.env.NEXT_PUBLIC_API_URL;
+const API = "/api/backend";
 
 export default function PowerliftingPage() {
   const [data, setData] = useState<Progress>({ lifts: [], total: null });

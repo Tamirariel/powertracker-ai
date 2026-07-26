@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+const API = "/api/backend";
+
 type Msg = { role: "user" | "assistant"; content: string };
 type Profile = { sex: string | null; age: number | null; bodyweight: number | null };
 

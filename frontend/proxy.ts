@@ -13,5 +13,5 @@ export function proxy(req: NextRequest) {
 
 // כל הדפים חוץ מ-login, ה-API של ההתחברות, וקבצים סטטיים
 export const config = {
-  matcher: ["/((?!login|api/login|api/logout|_next|favicon.ico).*)"],
+  matcher: ["/((?!api|login|_next|favicon.ico).*)"],
 };
