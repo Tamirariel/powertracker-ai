@@ -1,20 +1,11 @@
-#ממשק המשתמש בנוגע ליומן האימונים . יצירת האימונים הבאים , עדכון אימונים קודמים . חיבור לקובץ הדטא בייס 
+#ממשק המשתמש בנוגע ליומן האימונים . יצירת האימונים הבאים , עדכון אימונים קודמים
 import streamlit as st
 from datetime import date
 import calendar
-import sys, os
 import requests
-
 from auth import check_password
-#הוספת תיקיית BACK ל-sys.path . עדיין נחוץ לשמירה ומחיקה - יוסר בשלב הבא
-FRONT_DIR = os.path.dirname(os.path.abspath(__file__))
-BACK_DIR = os.path.join(os.path.dirname(FRONT_DIR), 'BACK')
-sys.path.append(BACK_DIR)
-
-import database
 
 API_URL = "http://localhost:8000"
-
 
 #עוזר לקריאות מה-API . מחזיר ברירת מחדל אם השרת לא זמין
 #עוזר לקריאות מה-API . 404 הוא תשובה תקינה (אין נתון) , שאר השגיאות מוצגות
@@ -32,7 +23,27 @@ def api_get(path, default=None):
 @st.cache_data(ttl=60, show_spinner=False)
 def api_get_cached(path, default=None):
     return api_get(path, default)
+#קריאות כתיבה . מנקות את הקאש כדי שהתצוגה תתעדכן מיד
+def api_post(path, payload):
+    try:
+        res = requests.post(f"{API_URL}{path}", json=payload, timeout=30)
+        res.raise_for_status()
+        st.cache_data.clear()
+        return res.json()
+    except requests.exceptions.RequestException as e:
+        st.error(f"שגיאה בשמירה: {e}")
+        return None
 
+
+def api_delete(path):
+    try:
+        res = requests.delete(f"{API_URL}{path}", timeout=30)
+        res.raise_for_status()
+        st.cache_data.clear()
+        return True
+    except requests.exceptions.RequestException as e:
+        st.error(f"שגיאה במחיקה: {e}")
+        return False
 
 #הגדרות עמוד
 st.set_page_config(
@@ -195,12 +206,16 @@ if st.session_state.current_exercises:
             if empty_exercises:
                 st.error(f"יש תרגילים בלי סטים: {', '.join(empty_exercises)}")
             else:
-                workout_id = database.save_workout(str(w_date), w_type, st.session_state.current_exercises)
-                st.cache_data.clear()
-                st.session_state.current_exercises = []
-                st.session_state.pop("form_started_date", None)
-                st.success("האימון נשמר!")
-                st.rerun()
+                result = api_post("/workouts", {
+                    "date": str(w_date),
+                    "workout_type": w_type,
+                    "exercises": st.session_state.current_exercises,
+                })
+                if result is not None:
+                    st.session_state.current_exercises = []
+                    st.session_state.pop("form_started_date", None)
+                    st.success("האימון נשמר!")
+                    st.rerun()
 
     with col_clear:
         if st.button("נקה טופס", use_container_width=True):
@@ -328,9 +343,8 @@ if st.session_state.selected_day:
                     st.write(f"**{exercise['name']}**: {sets_text}")
 
                 if st.button("מחק אימון", key=f"delete_cal_{w['id']}"):
-                    database.delete_workout(w['id'])
-                    st.cache_data.clear()
-                    st.session_state.selected_day = None
-                    st.rerun()
+                    if api_delete(f"/workouts/{w['id']}"):
+                        st.session_state.selected_day = None
+                        st.rerun()
     else:
         st.info(f"אין אימון בתאריך {sel}")

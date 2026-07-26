@@ -2,28 +2,38 @@
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from psycopg2 import pool
 import os
 from dotenv import dotenv_values
 
-#התיקייה שבה הסקריפט הזה יושב (BACK)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-#פונקציית עזר . מחפשת קודם בקובץ .env (מקומי) , ואם לא נמצא - במשתני הסביבה האמיתיים (Railway)
 def get_env(key):
     return config.get(key) or os.environ.get(key)
 
 
-
-#קריאת כתובת החיבור מה-.env . אותה שיטה שכבר עובדת ב-agent.py
 config = dotenv_values(os.path.join(BASE_DIR, '.env'))
 DATABASE_URL = get_env('DATABASE_URL')
 
 
-#פתיחת חיבור למסד הנתונים . כל פונקציה פותחת וסוגרת חיבור משלה - בדיוק כמו בגרסת הSQLite
+#בריכת חיבורים . פתיחת חיבור לענן לוקחת מאות מילישניות - שומרים אותם פתוחים ומשאילים
+POOL = pool.ThreadedConnectionPool(
+    minconn=1,
+    maxconn=10,
+    dsn=DATABASE_URL,
+    cursor_factory=RealDictCursor,
+)
+
+
+#שאילת חיבור מהבריכה
 def get_connection():
- conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
- return conn
+ return POOL.getconn()
+
+
+#החזרת חיבור לבריכה . מחליף את release(conn) - החיבור נשאר פתוח לשימוש הבא
+def release(conn):
+ POOL.putconn(conn)
 
 
 #יצירת כל הטבלאות אם הן לא קיימות . רץ בכל עליית אפליקציה
@@ -69,7 +79,7 @@ def init_db():
 
  conn.commit()
  cursor.close()
- conn.close()
+ release(conn)
 
 
 #שמירת אימון שלם . מקבל תאריך , סוג , ורשימת תרגילים במבנה מקונן :
@@ -101,7 +111,7 @@ def save_workout(date, workout_type, exercises_data):
 
  conn.commit()
  cursor.close()
- conn.close()
+ release(conn)
  return workout_id
 
 
@@ -114,7 +124,7 @@ def get_all_workouts():
  )
  rows = cursor.fetchall()
  cursor.close()
- conn.close()
+ release(conn)
  return [dict(row) for row in rows]
 
 
@@ -131,7 +141,7 @@ def get_workout_details(workout_id):
 
  if workout is None:
      cursor.close()
-     conn.close()
+     release(conn)
      return None
 
  result = dict(workout)
@@ -156,7 +166,7 @@ def get_workout_details(workout_id):
      })
 
  cursor.close()
- conn.close()
+ release(conn)
  return result
 
 
@@ -170,7 +180,7 @@ def get_last_workout_by_type(workout_type):
  )
  row = cursor.fetchone()
  cursor.close()
- conn.close()
+ release(conn)
 
  if row is None:
      return None
@@ -192,7 +202,7 @@ def get_exercise_history(exercise_name):
  """, (exercise_name,))
  rows = cursor.fetchall()
  cursor.close()
- conn.close()
+ release(conn)
  return [dict(row) for row in rows]
 
 
@@ -203,7 +213,7 @@ def delete_workout(workout_id):
  cursor.execute("DELETE FROM workouts WHERE id = %s", (workout_id,))
  conn.commit()
  cursor.close()
- conn.close()
+ release(conn)
 
 
 #שליפת כל שמות התרגילים שהוזנו אי פעם . לרשימה הדינמית בטופס ביומן
@@ -213,7 +223,7 @@ def get_all_exercise_names():
  cursor.execute("SELECT DISTINCT name FROM exercises ORDER BY name")
  rows = cursor.fetchall()
  cursor.close()
- conn.close()
+ release(conn)
  return [row['name'] for row in rows]
 
 
@@ -227,7 +237,7 @@ def save_profile(sex, age, bodyweight):
  """, (sex, age, bodyweight))
  conn.commit()
  cursor.close()
- conn.close()
+ release(conn)
 
 
 #שליפת פרופיל המשתמש . מחזיר מילון עם המידע , או None אם עדיין לא נשמר פרופיל בכלל
@@ -237,7 +247,7 @@ def get_profile():
  cursor.execute("SELECT sex, age, bodyweight FROM profile WHERE id = 1")
  row = cursor.fetchone()
  cursor.close()
- conn.close()
+ release(conn)
  if row is None:
      return None
  return dict(row)
@@ -257,7 +267,7 @@ def get_all_workouts_full():
  sets = [dict(r) for r in cursor.fetchall()]
 
  cursor.close()
- conn.close()
+ release(conn)
 
  #קיבוץ הסטים לפי תרגיל
  sets_by_exercise = {}
@@ -279,6 +289,7 @@ def get_all_workouts_full():
      w['exercises'] = exercises_by_workout.get(w['id'], [])
 
  return workouts
+
 #בדיקה עצמית . רץ רק כשמריצים את הקובץ ישירות ולא באימפורט
 if __name__ == '__main__':
     print("מתחבר ל-Postgres...")
