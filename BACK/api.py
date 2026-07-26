@@ -3,6 +3,8 @@ from pydantic import BaseModel
 from agent import ask_full_agent, langfuse
 import database
 from fastapi.middleware.cors import CORSMiddleware
+from typing import List
+from fastapi import FastAPI, HTTPException
 app = FastAPI()
 
 app.add_middleware(
@@ -89,3 +91,68 @@ def chat(req: ChatRequest):
     answer = ask_full_agent(build_context(req.question))
     langfuse.flush()
     return {"answer": answer}
+
+
+
+class SetIn(BaseModel):
+    reps: int
+    weight: float
+
+
+class ExerciseIn(BaseModel):
+    name: str
+    sets: List[SetIn]
+
+
+class WorkoutIn(BaseModel):
+    date: str
+    workout_type: str
+    exercises: List[ExerciseIn]
+
+
+@app.get("/workouts")
+def list_workouts():
+    return database.get_all_workouts()
+
+
+# החודש כולו בבקשה אחת - במקום לולאה של בקשות מלוח השנה
+@app.get("/workouts/full")
+def list_workouts_full():
+    return database.get_all_workouts_full()
+
+
+@app.get("/workouts/{workout_id}")
+def read_workout(workout_id: int):
+    w = database.get_workout_details(workout_id)
+    if w is None:
+        raise HTTPException(status_code=404, detail="אימון לא נמצא")
+    return w
+
+
+@app.post("/workouts")
+def create_workout(w: WorkoutIn):
+    exercises = [
+        {"name": ex.name, "sets": [{"reps": s.reps, "weight": s.weight} for s in ex.sets]}
+        for ex in w.exercises
+    ]
+    workout_id = database.save_workout(w.date, w.workout_type, exercises)
+    return {"id": workout_id}
+
+
+@app.delete("/workouts/{workout_id}")
+def remove_workout(workout_id: int):
+    database.delete_workout(workout_id)
+    return {"status": "deleted"}
+
+
+@app.get("/workouts/last/{workout_type}")
+def last_by_type(workout_type: str):
+    w = database.get_last_workout_by_type(workout_type)
+    if w is None:
+        raise HTTPException(status_code=404, detail="אין אימון קודם מסוג זה")
+    return w
+
+
+@app.get("/exercises/names")
+def exercise_names():
+    return database.get_all_exercise_names()

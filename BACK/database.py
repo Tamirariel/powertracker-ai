@@ -242,7 +242,43 @@ def get_profile():
      return None
  return dict(row)
 
+#שליפת כל האימונים עם התרגילים והסטים . שלוש שאילתות בלבד במקום שאילתה לכל אימון
+def get_all_workouts_full():
+ conn = get_connection()
+ cursor = conn.cursor()
 
+ cursor.execute("SELECT id, date, workout_type FROM workouts ORDER BY date DESC, id DESC")
+ workouts = [dict(r) for r in cursor.fetchall()]
+
+ cursor.execute("SELECT id, workout_id, name FROM exercises ORDER BY id")
+ exercises = [dict(r) for r in cursor.fetchall()]
+
+ cursor.execute("SELECT exercise_id, reps, weight FROM sets ORDER BY exercise_id, set_number")
+ sets = [dict(r) for r in cursor.fetchall()]
+
+ cursor.close()
+ conn.close()
+
+ #קיבוץ הסטים לפי תרגיל
+ sets_by_exercise = {}
+ for s in sets:
+     sets_by_exercise.setdefault(s['exercise_id'], []).append(
+         {'reps': s['reps'], 'weight': s['weight']}
+     )
+
+ #קיבוץ התרגילים לפי אימון
+ exercises_by_workout = {}
+ for e in exercises:
+     exercises_by_workout.setdefault(e['workout_id'], []).append({
+         'name': e['name'],
+         'sets': sets_by_exercise.get(e['id'], [])
+     })
+
+ #חיבור הכל
+ for w in workouts:
+     w['exercises'] = exercises_by_workout.get(w['id'], [])
+
+ return workouts
 #בדיקה עצמית . רץ רק כשמריצים את הקובץ ישירות ולא באימפורט
 if __name__ == '__main__':
     print("מתחבר ל-Postgres...")
