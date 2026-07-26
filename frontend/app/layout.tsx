@@ -33,6 +33,9 @@ export default function RootLayout({
           <Link href="/journal" className="hover:text-blue-400">יומן</Link>
           <Link href="/powerlifting" className="hover:text-blue-400">פאוורליפטינג</Link>
           <Link href="/chat" className="hover:text-blue-400">צ׳אט</Link>
+          <form action="/api/logout" method="post" className="ms-auto">
+            <button type="submit" className="text-white/50 hover:text-red-400">יציאה</button>
+          </form>
         </nav>
         {children}
       </body>
