@@ -3,17 +3,36 @@ import streamlit as st
 from datetime import date
 import calendar
 import sys, os
-from auth import check_password
+import requests
 
-#הוספת תיקיית BACK ל-sys.path כדי שאפשר לייבא ממנה . FRONT ו-BACK הן תיקיות אחיות
+from auth import check_password
+#הוספת תיקיית BACK ל-sys.path . עדיין נחוץ לשמירה ומחיקה - יוסר בשלב הבא
 FRONT_DIR = os.path.dirname(os.path.abspath(__file__))
 BACK_DIR = os.path.join(os.path.dirname(FRONT_DIR), 'BACK')
 sys.path.append(BACK_DIR)
 
 import database
 
-#יצירת הטבלאות אם לא קיימות . בטוח להריץ בכל עליית עמוד
-database.init_db()
+API_URL = "http://localhost:8000"
+
+
+#עוזר לקריאות מה-API . מחזיר ברירת מחדל אם השרת לא זמין
+#עוזר לקריאות מה-API . 404 הוא תשובה תקינה (אין נתון) , שאר השגיאות מוצגות
+def api_get(path, default=None):
+    try:
+        res = requests.get(f"{API_URL}{path}", timeout=30)
+        if res.status_code == 404:
+            return default
+        res.raise_for_status()
+        return res.json()
+    except requests.exceptions.RequestException as e:
+        st.error(f"שגיאה בקריאה ל-{path}: {e}")
+        return default
+#קריאה עם קאש . הסקריפט רץ מחדש בכל לחיצה - בלי זה זו בקשה חדשה בכל פעם
+@st.cache_data(ttl=60, show_spinner=False)
+def api_get_cached(path, default=None):
+    return api_get(path, default)
+
 
 #הגדרות עמוד
 st.set_page_config(
@@ -58,7 +77,7 @@ HEBREW_MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי',
 
 
 #איחוד הרשימה הבסיסית עם תרגילים שהוזנו ידנית בעבר . ככה תרגיל שהוקלד פעם מופיע מעכשיו ברשימה
-saved_names = database.get_all_exercise_names()
+saved_names = api_get_cached("/exercises/names", [])
 EXERCISE_LIST = BASE_EXERCISE_LIST + [name for name in saved_names if name not in BASE_EXERCISE_LIST]
 EXERCISE_LIST.append('אחר')
 
@@ -96,7 +115,7 @@ if st.session_state.current_exercises and "form_started_date" in st.session_stat
 
 
 #פיצר השכפול . מוצג רק אם קיים אימון קודם מאותו סוג
-last_workout = database.get_last_workout_by_type(w_type)
+last_workout = api_get_cached(f"/workouts/last/{w_type}")
 if last_workout is not None:
     if st.button(f"שכפל את אימון ה{w_type} מ-{last_workout['date']}", use_container_width=True):
         #אזהרה אם כבר התחלת להזין אימון . שלא יידרס בטעות
@@ -177,6 +196,7 @@ if st.session_state.current_exercises:
                 st.error(f"יש תרגילים בלי סטים: {', '.join(empty_exercises)}")
             else:
                 workout_id = database.save_workout(str(w_date), w_type, st.session_state.current_exercises)
+                st.cache_data.clear()
                 st.session_state.current_exercises = []
                 st.session_state.pop("form_started_date", None)
                 st.success("האימון נשמר!")
@@ -217,8 +237,9 @@ def go_next_month():
 
 
 #בניית מילון תאריך -> רשימת אימונים . לשימוש בצביעת ימים בלוח
+#בניית מילון תאריך -> רשימת אימונים . כולל תרגילים וסטים בבקשה אחת
 def build_workouts_by_date():
-    workouts = database.get_all_workouts()
+    workouts = api_get_cached("/workouts/full", [])
     by_date = {}
     for w in workouts:
         by_date.setdefault(w['date'], []).append(w)
@@ -302,13 +323,13 @@ if st.session_state.selected_day:
                 )
                 st.write("")
 
-                details = database.get_workout_details(w['id'])
-                for exercise in details['exercises']:
+                for exercise in w['exercises']:
                     sets_text = " , ".join(f"{s['reps']}x{s['weight']}" for s in exercise['sets'])
                     st.write(f"**{exercise['name']}**: {sets_text}")
 
                 if st.button("מחק אימון", key=f"delete_cal_{w['id']}"):
                     database.delete_workout(w['id'])
+                    st.cache_data.clear()
                     st.session_state.selected_day = None
                     st.rerun()
     else:
