@@ -5,6 +5,7 @@ import database
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 from fastapi import FastAPI, HTTPException
+import powerlifting
 app = FastAPI()
 
 app.add_middleware(
@@ -156,3 +157,7 @@ def last_by_type(workout_type: str):
 @app.get("/exercises/names")
 def exercise_names():
     return database.get_all_exercise_names()
+
+@app.get("/powerlifting/progress")
+def powerlifting_progress():
+    return powerlifting.all_progress()
