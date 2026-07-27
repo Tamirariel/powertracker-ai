@@ -4,6 +4,8 @@
 import anthropic
 import os
 import pickle
+import gzip
+import json
 import chromadb
 from langfuse import Langfuse, observe
 from opentelemetry.instrumentation.anthropic import AnthropicInstrumentor
@@ -32,60 +34,23 @@ AnthropicInstrumentor().instrument()
 
 client = anthropic.Anthropic(api_key=get_env("ANTHROPIC_API_KEY"))
 
-documents = []
-ids = []
 
-with open(os.path.join(BASE_DIR, 'cluster_model', 'cluster_model_list.pkl'), 'rb') as f:
+#טעינת מודלי הקלאסטרינג (בלי טבלאות הנתונים הגולמיות)
+with open(os.path.join(BASE_DIR, 'cluster_model', 'cluster_model_slim.pkl'), 'rb') as f:
  all_cluster_models = pickle.load(f)
 
-with open(os.path.join(BASE_DIR,'classification_model','classification_model_list.pkl'), 'rb') as f:
+#טעינת מודלי הקלאסיפיקציה (דחוסים)
+with gzip.open(os.path.join(BASE_DIR, 'classification_model', 'classification_model_gz.pkl.gz'), 'rb') as f:
     all_classification_models = pickle.load(f)
 
 
+#טעינת מסמכי הקבוצות שחושבו מראש מתוך הטבלאות
+with open(os.path.join(BASE_DIR, 'cluster_model', 'cluster_documents.json'), 'r', encoding='utf-8') as f:
+    cluster_documents_data = json.load(f)
 
-#בדיקת המסמכים לכל הקבוצות לפי קלאסטרים 
-for i in all_cluster_models:
- #השמת משתנים  מתוך המילון
- table = all_cluster_models[i]['table']
- sex = all_cluster_models[i]['sex']
- lift_column = all_cluster_models[i]['lift_column']
- 
- #בדיקת מין
- sex_heb = 'גברים' if sex == 'M' else 'נשים'
+documents = cluster_documents_data['documents']
+ids = cluster_documents_data['ids']
 
- 
- #ממוצעי הקבוצה 
- cols = ['Age_real', 'BodyweightKg_real', f'{lift_column}_real'] 
- stats = table.groupby('cluster')[cols].mean()
- #נתונים נוספים . טיית תקן ,מספר מאמנים , טווח , מינימום ומקסימום
- for cluster_id, row in stats.iterrows():
-    
-      #. כמה הקבוצה מפוזרת .חישוב סטיית תקן
-     cluster_data = table[table['cluster'] == cluster_id]
-     std_lift = cluster_data[f'{lift_column}_real'].std()
-     min_lift = cluster_data[f'{lift_column}_real'].min()
-     max_lift = cluster_data[f'{lift_column}_real'].max()
-     n = len(cluster_data)
-    
-     age_str = f"גיל ממוצע {row['Age_real']:.1f} "
-     #המרה לעברית 
-     lift_heb = {
-      'Best3SquatKg': 'סקוואט',
-      'Best3BenchKg': 'בנץ',
-      'Best3DeadliftKg': 'דדליפט',
-      'TotalKg': 'טוטאל'
-      }
-     doc = f"קבוצה {cluster_id} של {sex_heb} ב-{lift_heb[lift_column]}: " \
-          f"{age_str}" \
-          f"משקל {row['BodyweightKg_real']:.1f} קג, " \
-          f"{lift_heb[lift_column]} ממוצע {row[f'{lift_column}_real']:.1f} קג, " \
-          f"טווח {min_lift:.0f}-{max_lift:.0f} קג, " \
-          f"סטיית תקן {std_lift:.1f} קג, " \
-          f"מספר מתאמנים {n}"
-     
-     #הוספה לרשימות 
-     documents.append(doc)
-     ids.append(f"{i}_cluster_{cluster_id}")
 
 if collection.count() == 0:
     collection.add(
@@ -332,4 +297,3 @@ def ask_full_agent(user_query):
     )
 
  return result
- 

@@ -1,7 +1,10 @@
 .env
+.env*.local
 __pycache__/
 *.pyc
 venv/
 *.csv
 powertracker.db
 backup/
+cluster_model_list.pkl
+classification_model_list.pkl
