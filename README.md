@@ -4,7 +4,7 @@
 
 ![Status](https://img.shields.io/badge/status-active-brightgreen) ![Python](https://img.shields.io/badge/Python-3.13-blue) ![Next.js](https://img.shields.io/badge/Next.js-16-black) ![FastAPI](https://img.shields.io/badge/FastAPI-0.1x-009688)
 
-> 🔗 **דמו חי:** [powertracker-ai-production.up.railway.app](https://powertracker-ai-production.up.railway.app/) *(הכניסה מוגנת בסיסמה - פנו אליי לקבלת גישה)*
+> 🔗 **דמו חי:** [powertracker-ai.up.railway.app](https://powertracker-ai.up.railway.app/) *(הכניסה מוגנת בסיסמה - פנו אליי לקבלת גישה)*
 
 ---
 
@@ -34,13 +34,25 @@
   - `analyze_cluster` - סיווג המתאמן לקבוצת ייחוס (KMeans) והשוואה אליה
   - `predict_progress` - חיזוי קצב התקדמות (Random Forest): איטי / בינוני / מהיר
 - **`powerlifting.py`** - חישובי 1RM (נוסחת Epley), התקדמות לפי תאריך, וקצב אישי ברגרסיה לינארית.
-- **RAG:** תיאורי הקבוצות (ממוצעים, טווחים, סטיות תקן) נבנים בעליית השרת ונשמרים ב-**ChromaDB**, ומשם נשלפים כ-context לפרומפט.
+- **RAG:** תיאורי הקבוצות (ממוצעים, טווחים, סטיות תקן) מחושבים מראש מטבלאות האימון ונשמרים כ-`cluster_documents.json`. בעליית השרת הם נטענים לתוך **ChromaDB**, ומשם נשלפים כ-context לפרומפט.
 - **Observability:** ניטור מלא של קריאות הסוכן באמצעות **Langfuse** + OpenTelemetry.
 - **ML Pipelines:** סקריפטים לניקוי הדאטה, בחירת K אופטימלי ואימון המודלים.
 
 ### בניית ההקשר לסוכן
 
 הפרונט שולח לסוכן **רק את השאלה**. `build_context` בשרת מצרף אליה את הפרופיל (מגדר, גיל, משקל) ואת תמצית שלושת האימונים האחרונים מהיומן. כך פורמט הפרומפט נשאר במקום אחד, ולא משוכפל בין הפרונט לבאק.
+
+### ארטיפקטים של המודלים
+
+קובצי המודלים בריפו מכילים **רק את מה שנחוץ בזמן ריצה**:
+
+| קובץ | תוכן | גודל |
+|---|---|---|
+| `cluster_model_slim.pkl` | 8 מודלי KMeans + scalers, בלי טבלאות הדאטה הגולמיות | ~6 MB |
+| `cluster_documents.json` | 28 תיאורי הקבוצות ל-RAG, מחושבים מראש | ~10 KB |
+| `classification_model_gz.pkl.gz` | 8 מודלי Random Forest, דחוסים ב-gzip | ~24 MB |
+
+הטבלאות הגולמיות (1.4M שורות) שימשו רק לחישוב התיאורים, ולכן אינן נשמרות. התוצאה: הריפו קטן ב-85%, העלייה כמעט מיידית, וצריכת הזיכרון בזמן ריצה מצומצמת לגודל המודלים בלבד.
 
 ## 📁 Repository Structure
 
@@ -59,6 +71,7 @@ powertracker-ai/
 │   │       ├── logout/route.ts     # מחיקת cookie
 │   │       └── backend/[...path]/  # שכבת מעבר לבאק (מוסיפה X-API-Key)
 │   ├── proxy.ts                    # חוסם דפים ללא cookie תקין
+│   ├── railway.json                # הגדרות פריסה - service הפרונט
 │   └── .env.local                  # לא בריפו - ראו Quick Start
 │
 ├── BACK/
@@ -69,10 +82,11 @@ powertracker-ai/
 │   ├── data_cleaning.py            # ניקוי דאטהסט OpenPowerlifting (IQR outliers)
 │   ├── cluster_model/              # אימון KMeans + בחירת K + גרפים
 │   ├── classification_model/       # אימון Random Forest + ניסוי max_depth
+│   ├── requirements.txt            # תלויות הבאק
+│   ├── railway.json                # הגדרות פריסה - service הבאק
+│   ├── .python-version             # גרסת Python לסביבת הפריסה
 │   └── .env                        # לא בריפו - ראו Quick Start
 │
-├── requirements.txt                # תלויות הבאק
-├── nixpacks.toml                   # הגדרות פריסה ל-Railway
 ├── start.ps1                       # מרים את שני השרתים מקומית
 └── README.md                       # אתם כאן
 ```
@@ -83,7 +97,7 @@ powertracker-ai/
 
 ### Prerequisites
 
-- Python 3.11+
+- Python 3.13
 - Node.js 20+
 - PostgreSQL מ-[Railway](https://railway.app/) (או מקומי/Docker לבדיקות)
 - מפתח API של [Anthropic](https://console.anthropic.com/)
@@ -146,7 +160,7 @@ cd powertracker-ai
 # 2. Backend
 python -m venv venv
 venv\Scripts\activate        # Windows
-pip install -r requirements.txt
+pip install -r BACK/requirements.txt
 
 # 3. Frontend
 cd frontend
@@ -176,11 +190,11 @@ npm run dev
 
 היכנסו ל-http://localhost:3000 - טבלאות מסד הנתונים נוצרות אוטומטית בעליית הבאק (`init_db`).
 
-> העלייה הראשונה של הבאק לוקחת 10-30 שניות: טעינת המודלים מה-pickle ובניית אוסף ה-ChromaDB.
+> בהרצה הראשונה בסביבה חדשה, ChromaDB מוריד מודל embedding (~79MB) ושומר אותו במטמון המקומי. ההרצות הבאות מיידיות.
 
 ### Step 3 (Optional): Retrain the Models
 
-המודלים המאומנים כבר כלולים בריפו (`.pkl`). לאימון מחדש:
+המודלים המאומנים כבר כלולים בריפו. לאימון מחדש:
 
 ```bash
 # 1. הורידו את הדאטהסט אל BACK/AGENT_data/openpowerlifting.csv
@@ -195,7 +209,12 @@ python BACK/cluster_model/clustering_model_function.py
 
 # 4. אימון מודל הקלאסיפיקציה (+ כיוונון max_depth)
 python BACK/classification_model/classification_model.py
+
+# 5. ייצור הארטיפקטים שהאפליקציה טוענת בזמן ריצה
+python BACK/build_artifacts.py
 ```
+
+> שלב 5 מפריד בין תוצרי האימון (שמכילים את טבלאות הדאטה) לבין הארטיפקטים שהאפליקציה באמת צריכה. הוא מחשב את 28 תיאורי הקבוצות ל-RAG, שומר את מודלי הקלאסטרינג בלי הטבלאות, ודוחס את מודלי הקלאסיפיקציה.
 
 ## 🔌 API Endpoints
 
@@ -216,6 +235,19 @@ python BACK/classification_model/classification_model.py
 | GET | `/exercises/names` | כל שמות התרגילים שהוזנו |
 | GET | `/powerlifting/progress` | שיאים, נקודות התקדמות וקצב לשלושת הליפטים |
 
+## ☁️ Deployment
+
+הפרויקט פרוס ב-[Railway](https://railway.app/) כ-**שני services נפרדים מאותו ריפו**, בתוספת PostgreSQL מנוהל:
+
+| Service | Root Directory | Config | חשיפה |
+|---|---|---|---|
+| `powertracker-ai` (באק) | `BACK` | `/BACK/railway.json` | פנימי בלבד |
+| `frontend` | `frontend` | `/frontend/railway.json` | domain ציבורי |
+
+**הבאק אינו נגיש מהאינטרנט.** אין לו domain ציבורי כלל, והפרונט פונה אליו דרך הרשת הפרטית של Railway בכתובת `powertracker-ai.railway.internal:8000`. הרשת הפרטית עובדת על IPv6, ולכן הבאק מאזין ל-`::` בעוד הפרונט מאזין ל-`0.0.0.0` כדי לקבל תעבורה ציבורית.
+
+משתני הסביבה מוגדרים בדשבורד של Railway - אותם שמות כמו בקבצי ה-`.env` המקומיים. `API_KEY` חייב להיות זהה בשני ה-services.
+
 ## 🛠️ Technology Stack
 
 | Component | Technology |
@@ -229,7 +261,7 @@ python BACK/classification_model/classification_model.py
 | Auth | Password gate, `httpOnly` cookie, Next.js proxy |
 | Observability | Langfuse (Tracing) + OpenTelemetry |
 | Data | OpenPowerlifting Dataset (1M+ competition results) |
-| Deployment | Railway (Nixpacks) |
+| Deployment | Railway (Railpack) - שני services + רשת פרטית |
 
 ## 📖 About This Project
 
