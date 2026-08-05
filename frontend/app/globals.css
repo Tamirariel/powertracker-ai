@@ -1,20 +1,477 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+/* ============================================================
+   PowerTracker — מערכת עיצוב
+   הפלטה נגזרת מצבעי דיסקיות מכוילות בפאוורליפטינג:
+   25=אדום  20=כחול  15=צהוב  10=ירוק  5=לבן
+   ============================================================ */
+
 :root {
-  --background: #12141C;
-  --foreground: #E8E9ED;
+  /* משטחים — פחם חם: ברזל, גומי וגיר. לא אפור־כחלחל. */
+  --base: #14120f;
+  --surface: #1c1916;
+  --raised: #262220;
+  --line: #332e28;
+  --line-strong: #453e36;
+
+  /* טקסט */
+  --ink: #f5f1ea;
+  --muted: #a69c8e;
+  --faint: #6e655a;
+
+  /* צבעי דיסקיות */
+  --plate-red: #c4342e;
+  --plate-blue: #1f5fa8;
+  --plate-yellow: #f5b301;
+  --plate-green: #2e8b57;
+  --plate-white: #e9e4da;
+
+  /* סמנטיקה — כל צבע הרוויח את תפקידו מהענף עצמו */
+  --accent: var(--plate-yellow); /* פעולה ראשית + שיאים */
+  --accent-hot: #ffc933; /* hover */
+  --accent-dim: #493506; /* רקעים ומסגרות רכות */
+  --on-accent: #17130b; /* טקסט על גבי צהוב */
+  --good: var(--plate-white); /* נורית שופט לבנה */
+  --bad: var(--plate-red); /* נורית שופט אדומה / מחיקה */
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-base: var(--base);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+
+  --color-accent: var(--accent);
+  --color-accent-hot: var(--accent-hot);
+  --color-accent-dim: var(--accent-dim);
+  --color-on-accent: var(--on-accent);
+  --color-good: var(--good);
+  --color-bad: var(--bad);
+
+  --color-plate-red: var(--plate-red);
+  --color-plate-blue: var(--plate-blue);
+  --color-plate-yellow: var(--plate-yellow);
+  --color-plate-green: var(--plate-green);
+  --color-plate-white: var(--plate-white);
+
+  /* Rubik לכל העברית, Oswald למספרים בלבד (לוח תוצאות) */
+  --font-sans: var(--font-rubik);
+  --font-display: var(--font-rubik);
+  --font-numeric: var(--font-oswald);
+  --font-mono: var(--font-oswald);
+
+  --radius-card: 14px;
+  --radius-control: 10px;
+}
+
+/* ============================================================
+   בסיס
+   ============================================================ */
+
+html {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--base);
+  color: var(--ink);
+  font-family: var(--font-rubik), system-ui, sans-serif;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+/* מיקוד מקלדת — נראה תמיד, בצבע הפעולה */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--base);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 99px;
+  border: 2px solid var(--base);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--faint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================
+   טיפוגרפיה
+   ============================================================ */
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-rubik), system-ui, sans-serif;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: clamp(1.75rem, 1.2rem + 2vw, 2.5rem);
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+h2 {
+  font-size: clamp(1.15rem, 1rem + 0.7vw, 1.4rem);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+h3 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* תווית עילית: קטנה, מרווחת, שקטה. מסמנת קטע. */
+.eyebrow {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--faint);
+}
+
+.lede {
+  color: var(--muted);
+  font-weight: 300;
+  line-height: 1.6;
+}
+
+/* ============================================================
+   האלמנט החתימתי — מוט טעון
+   רצף דיסקיות שנמוג לאפור, בקצה הפתיחה של הקו
+   ============================================================ */
+
+.loaded-bar {
+  height: 2px;
+  background: linear-gradient(
+    to left,
+    var(--plate-red) 0 34px,
+    var(--plate-blue) 34px 68px,
+    var(--plate-yellow) 68px 102px,
+    var(--plate-green) 102px 136px,
+    var(--plate-white) 136px 170px,
+    var(--line) 170px 100%
+  );
+}
+
+/* ============================================================
+   מבנה
+   ============================================================ */
+
+.page {
+  width: 100%;
+  max-width: 72rem;
+  margin-inline: auto;
+  padding: 2rem 1.25rem 4rem;
+}
+
+@media (min-width: 768px) {
+  .page {
+    padding-inline: 2rem;
+  }
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  padding: 1.25rem;
+}
+
+.card-raised {
+  background: var(--raised);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-card);
+  padding: 1.25rem;
+}
+
+.divider {
+  height: 1px;
+  background: var(--line);
+  border: 0;
+  margin-block: 2rem;
+}
+
+/* ============================================================
+   נתונים — לוח התוצאות
+   ============================================================ */
+
+.stat {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  padding: 1rem 1.25rem;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--faint);
+  letter-spacing: 0.04em;
+}
+
+.stat-value {
+  font-family: var(--font-oswald), system-ui, sans-serif;
+  font-size: clamp(2rem, 1.4rem + 2.4vw, 3.25rem);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* שיא אישי — הפעם היחידה שמספר צבוע */
+.stat-value.is-record {
+  color: var(--accent);
+}
+
+.stat-unit {
+  font-size: 0.45em;
+  font-weight: 400;
+  color: var(--muted);
+  margin-inline-start: 0.25em;
+}
+
+/* מספר בשורת טקסט */
+.num {
+  font-family: var(--font-oswald), system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* ============================================================
+   פעולות
+   היררכיה: ראשית אחת בכל מסך. השאר נסוגות.
+   ============================================================ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0 1.1rem;
+  border-radius: var(--radius-control);
+  border: 1px solid transparent;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ראשית — צהוב דיסקית, טקסט כהה */
+.btn-primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hot);
+}
+.btn-primary:disabled {
+  background: var(--raised);
+  border-color: var(--line-strong);
+  color: var(--faint);
+  opacity: 1;
+}
+/* משנית — מסגרת בלבד */
+.btn-secondary {
+  background: var(--raised);
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+.btn-secondary:hover:not(:disabled) {
+  border-color: var(--faint);
+}
+
+/* שקטה — טקסט בלבד */
+.btn-ghost {
+  background: transparent;
+  color: var(--muted);
+  font-weight: 500;
+}
+.btn-ghost:hover:not(:disabled) {
+  color: var(--ink);
+  background: var(--raised);
+}
+
+/* פסילה — אדום נורית שופט */
+.btn-danger {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--bad) 40%, transparent);
+  color: var(--bad);
+}
+.btn-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--bad) 14%, transparent);
+  border-color: var(--bad);
+}
+
+/* צ'יפ — הצעה ללחיצה, לא כפתור */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4rem 0.85rem;
+  border-radius: 99px;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 0.825rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+.chip:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ============================================================
+   שדות
+   ============================================================ */
+
+.label {
+  display: block;
+  font-size: 0.775rem;
+  font-weight: 500;
+  color: var(--muted);
+  margin-bottom: 0.4rem;
+}
+
+.field {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0 0.85rem;
+  background: var(--base);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.925rem;
+  transition: border-color 0.15s ease;
+}
+
+.field::placeholder {
+  color: var(--faint);
+}
+
+.field:hover {
+  border-color: var(--faint);
+}
+
+.field:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+/* שדות מספריים — ספרות לוח תוצאות */
+.field-num {
+  font-family: var(--font-oswald), system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+select.field {
+  appearance: none;
+  padding-inline-end: 2.5rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none' stroke='%23A69C8E' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 0.9rem center;
+  background-size: 12px 8px;
+}
+
+/* בורר מגדר / החלפה בין שתי אפשרויות */
+.toggle-option {
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--line-strong);
+  background: var(--base);
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.toggle-option[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+
+/* ============================================================
+   מצבים
+   ============================================================ */
+
+/* מסך ריק הוא הזמנה לפעולה, לא הודעת שגיאה */
+.empty {
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-card);
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  color: var(--muted);
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface) 25%,
+    var(--raised) 50%,
+    var(--surface) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: var(--radius-control);
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
 }

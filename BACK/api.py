@@ -75,6 +75,27 @@ def build_journal_summary():
     return " | ".join(lines)
 
 
+# שיאי הפאוורליפטינג - מחושבים מכל ההיסטוריה, לא רק מהאימונים האחרונים
+def build_lifts_summary():
+    try:
+        progress = powerlifting.all_progress()
+    except Exception:
+        return None
+
+    parts = [
+        f"{lift['name']} {lift['best_1rm']} קג"
+        for lift in progress.get("lifts", [])
+        if lift.get("best_1rm") is not None
+    ]
+    if not parts:
+        return None
+
+    text = " , ".join(parts)
+    if progress.get("total") is not None:
+        text += f" , טוטאל {progress['total']} קג"
+    return text
+
+
 # בניית ההקשר לסוכן - הפרונט לא צריך לדעת על פורמט הפרומפט
 def build_context(question):
     p = database.get_profile() or {}
@@ -86,7 +107,9 @@ def build_context(question):
         parts.append(f"גיל: {p['age']}")
     if p.get("bodyweight"):
         parts.append(f"משקל גוף: {p['bodyweight']} קג")
-
+    lifts = build_lifts_summary()
+    if lifts:
+        parts.append(f"שיאים משוערים (1RM) מכל ההיסטוריה: {lifts}")
     summary = build_journal_summary()
     if summary:
         parts.append(f"אימונים אחרונים מהיומן: {summary}")
