@@ -13,6 +13,7 @@ type Lift = {
   best_1rm: number | null;
   slope: number | null;
   points: Point[];
+  best_source: { date: string; weight: number; reps: number } | null;
 };
 type Progress = { lifts: Lift[]; total: number | null };
 
@@ -118,49 +119,58 @@ export default function PowerliftingPage() {
 
       {/* ═══ טוטאל — המספר של הענף ═══════════════════════ */}
       {booting ? (
-        <div className="skeleton mt-6 h-40 w-full" />
-      ) : data.total === null ? (
-        <div className="empty mt-6">
-          <p className="text-sm">עוד אין נתוני פאוורליפטינג.</p>
-          <p className="mt-1 text-[0.8rem] text-faint">
-            שמור ביומן אימון עם סקוואט, בנץ או דדליפט והמספרים יופיעו כאן.
-          </p>
-        </div>
-      ) : (
-        <section className="card-raised mt-6">
-          <p className="eyebrow">טוטאל · סכום שלושת השיאים</p>
-          <p className="stat-value is-record mt-2">
-            {data.total.toFixed(1)}
-            <span className="stat-unit">ק״ג</span>
-          </p>
+  <div className="skeleton mt-6 h-40 w-full" />
+) : withData.length === 0 ? (
+  <div className="empty mt-6">
+    <p className="text-sm">עוד אין נתוני פאוורליפטינג.</p>
+    <p className="mt-1 text-[0.8rem] text-faint">
+      שמור ביומן אימון עם סקוואט, בנץ או דדליפט והמספרים יופיעו כאן.
+    </p>
+  </div>
+) : (
+  <section className="card-raised mt-6">
+    <p className="eyebrow">
+      {data.total !== null ? "טוטאל · סכום שלושת השיאים" : "השיאים שלך"}
+    </p>
 
-          {/* רצועת לוח תוצאות */}
-          {withData.length > 0 && (
-            <div className="mt-5 grid grid-cols-3 gap-px overflow-hidden rounded-control bg-line">
-              {withData.map((l) => (
-                <div key={l.name} className="bg-surface px-3 py-2.5 text-center">
-                  <p className="text-[0.7rem] text-faint">{l.name}</p>
-                  <p className="num mt-0.5 text-lg font-semibold">
-                    {l.best_1rm!.toFixed(1)}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
+    {data.total !== null ? (
+      <p className="stat-value is-record mt-2">
+        {data.total.toFixed(1)}<span className="stat-unit">ק״ג</span>
+      </p>
+    ) : (
+      <p className="mt-2 text-sm text-muted">
+        הטוטאל יחושב כששלושת הליפטים יופיעו ביומן.
+      </p>
+    )}
 
-          <button
-            onClick={() =>
-              ask("total", `הטוטאל שלי הוא ${data.total!.toFixed(0)} קג. איפה אני עומד ביחס לאחרים?`)
-            }
-            disabled={busy !== null}
-            className="btn btn-primary mt-5 w-full"
-          >
-            {busy === "total" ? "בודק…" : "השווה את הטוטאל שלי לאחרים"}
-          </button>
+    <div className="mt-5 grid grid-cols-3 gap-px overflow-hidden rounded-control bg-line">
+      {["סקוואט", "בנץ", "דדליפט"].map((n) => {
+        const l = data.lifts.find((x) => x.name === n);
+        return (
+          <div key={n} className="bg-surface px-3 py-2.5 text-center">
+            <p className="text-[0.7rem] text-faint">{n}</p>
+            <p className={`num mt-0.5 text-lg font-semibold ${l?.best_1rm == null ? "text-faint" : ""}`}>
+              {l?.best_1rm != null ? l.best_1rm.toFixed(1) : "—"}
+            </p>
+          </div>
+        );
+      })}
+    </div>
 
-          <AgentAnswer answer={answers["total"]} />
-        </section>
-      )}
+    {data.total !== null && (
+      <>
+        <button
+          onClick={() => ask("total", `הטוטאל שלי הוא ${data.total!.toFixed(0)} קג. איפה אני עומד ביחס לאחרים?`)}
+          disabled={busy !== null}
+          className="btn btn-primary mt-5 w-full"
+        >
+          {busy === "total" ? "בודק…" : "השווה את הטוטאל שלי לאחרים"}
+        </button>
+        <AgentAnswer answer={answers["total"]} />
+      </>
+    )}
+  </section>
+)}
 
       {/* ═══ שלושת הליפטים ═══════════════════════════════ */}
       {data.lifts.map((lift) => {
@@ -188,6 +198,15 @@ export default function PowerliftingPage() {
                       {lift.best_1rm.toFixed(1)}
                       <span className="stat-unit">ק״ג</span>
                     </p>
+                    {lift.best_source && (
+                      <p className="mt-1.5 text-[0.7rem] text-faint">
+                        מוערך מ־
+                        <span className="num">
+                          {lift.best_source.weight}×{lift.best_source.reps}
+                        </span>{" "}
+                        בנוסחת Epley
+                      </p>
+                    )}
                   </div>
                   <div className="stat flex-1">
                     <p className="stat-label">קצב אישי</p>
