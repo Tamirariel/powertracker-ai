@@ -31,20 +31,22 @@ def linear_slope(xs, ys):
 def lift_progress(lift_name):
     history = database.get_exercise_history(lift_name)
 
+    #שומרים את הסט המקורי ולא רק את הערך המחושב - כדי להציג מאיפה ההערכה הגיעה
     best_by_date = {}
     for row in history:
         est = epley_1rm(row['weight'], row['reps'])
         d = row['date']
-        if d not in best_by_date or est > best_by_date[d]:
-            best_by_date[d] = est
+        if d not in best_by_date or est > best_by_date[d]['est']:
+            best_by_date[d] = {'est': est, 'weight': row['weight'], 'reps': row['reps']}
 
-    points = [
-        {"date": d, "est_1rm": round(v, 1)}
-        for d, v in sorted(best_by_date.items())
-    ]
+    ordered = sorted(best_by_date.items())
+    points = [{"date": d, "est_1rm": round(v['est'], 1)} for d, v in ordered]
 
     if not points:
-        return {"name": lift_name, "best_1rm": None, "slope": None, "points": []}
+        return {
+            "name": lift_name, "best_1rm": None, "slope": None,
+            "points": [], "best_source": None,
+        }
 
     #ציר ה-x בחודשים מהאימון הראשון . 30.44 = אורך חודש ממוצע
     first = _date.fromisoformat(points[0]["date"])
@@ -57,11 +59,19 @@ def lift_progress(lift_name):
     if slope is not None and (xs[-1] < 1.0 or len(points) < 3):
         slope = None
 
+    #הסט שהוליד את השיא . הערכה מ-8 חזרות פחות מדויקת מהרמה בודדת, וכדאי שזה יהיה גלוי
+    best_date, best = max(ordered, key=lambda kv: kv[1]['est'])
+
     return {
         "name": lift_name,
         "best_1rm": round(max(ys), 1),
         "slope": round(slope, 2) if slope is not None else None,
         "points": points,
+        "best_source": {
+            "date": best_date,
+            "weight": best['weight'],
+            "reps": best['reps'],
+        },
     }
 
  
