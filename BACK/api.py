@@ -178,8 +178,8 @@ def remove_workout(workout_id: int):
 
 
 @app.get("/workouts/last/{workout_type}")
-def last_by_type(workout_type: str):
-    w = database.get_last_workout_by_type(workout_type)
+def last_by_type(workout_type: str, before: str | None = None):
+    w = database.get_last_workout_by_type(workout_type, before)
     if w is None:
         raise HTTPException(status_code=404, detail="אין אימון קודם מסוג זה")
     return w

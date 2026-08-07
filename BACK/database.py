@@ -171,13 +171,22 @@ def get_workout_details(workout_id):
 
 
 #שליפת האימון האחרון מסוג מסוים . בשביל פיצר השכפול
-def get_last_workout_by_type(workout_type):
+#before מגביל לאימונים שקדמו לתאריך - כדי שעדכון רטרואקטיבי יציע את האימון הנכון
+def get_last_workout_by_type(workout_type, before=None):
  conn = get_connection()
  cursor = conn.cursor()
- cursor.execute(
-     "SELECT id FROM workouts WHERE workout_type = %s ORDER BY date DESC, id DESC LIMIT 1",
-     (workout_type,)
- )
+
+ if before:
+     cursor.execute(
+         "SELECT id FROM workouts WHERE workout_type = %s AND date < %s ORDER BY date DESC, id DESC LIMIT 1",
+         (workout_type, before)
+     )
+ else:
+     cursor.execute(
+         "SELECT id FROM workouts WHERE workout_type = %s ORDER BY date DESC, id DESC LIMIT 1",
+         (workout_type,)
+     )
+
  row = cursor.fetchone()
  cursor.close()
  release(conn)
@@ -185,7 +194,6 @@ def get_last_workout_by_type(workout_type):
  if row is None:
      return None
  return get_workout_details(row['id'])
-
 
 #שליפת כל הסטים של תרגיל מסוים לאורך זמן . בשביל דף הפאוורליפטינג
 #מחזיר שורות של : תאריך , חזרות , משקל

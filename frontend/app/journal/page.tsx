@@ -112,9 +112,9 @@ export default function JournalPage() {
       .catch(() => setNames([]));
   }, []);
 
-  // האימון האחרון מהסוג הנבחר. 404 הוא תשובה תקינה - אין אימון כזה
-  const loadLast = useCallback((type: string) => {
-    fetch(`${API}/workouts/last/${encodeURIComponent(type)}`)
+// האימון האחרון מהסוג הנבחר שקדם לתאריך בטופס. 404 הוא תשובה תקינה - אין אימון כזה
+  const loadLast = useCallback((type: string, before: string) => {
+    fetch(`${API}/workouts/last/${encodeURIComponent(type)}?before=${before}`)
       .then((res) => (res.ok ? res.json() : null))
       .then(setLastWorkout)
       .catch(() => setLastWorkout(null));
@@ -126,8 +126,9 @@ export default function JournalPage() {
   }, [loadWorkouts, loadNames]);
 
   useEffect(() => {
-    loadLast(wType);
-  }, [wType, loadLast]);
+    loadLast(wType, wDate);
+  }, [wType, wDate, loadLast]);
+
 
   // איחוד הרשימה הבסיסית עם תרגילים שהוזנו ידנית בעבר
   const exerciseList = [
@@ -221,7 +222,7 @@ export default function JournalPage() {
       setNotice({ text: "האימון נשמר", ok: true });
       loadWorkouts();
       loadNames();
-      loadLast(wType); // כדי שכפתור השכפול יציע את החדש ולא את הקודם
+      loadLast(wType, wDate); // כדי שכפתור השכפול יציע את החדש ולא את הקודם
     } catch {
       setNotice({ text: "השמירה נכשלה. נסה שוב", ok: false });
     } finally {
@@ -236,7 +237,7 @@ export default function JournalPage() {
       setConfirmId(null);
       setSelected(null);
       loadWorkouts();
-      loadLast(wType);
+      loadLast(wType, wDate);
     } catch {
       setError("המחיקה נכשלה. נסה שוב");
     }
