@@ -4,7 +4,8 @@
 
 ![Status](https://img.shields.io/badge/status-active-brightgreen) ![Python](https://img.shields.io/badge/Python-3.13-blue) ![Next.js](https://img.shields.io/badge/Next.js-16-black) ![FastAPI](https://img.shields.io/badge/FastAPI-0.1x-009688)
 
-> 🔗 **דמו חי:** [powertracker-ai.up.railway.app](https://powertracker-ai.up.railway.app/) *(הכניסה מוגנת בסיסמה - פנו אליי לקבלת גישה)*
+> 🔗 **דמו חי:** [powertracker-ai.up.railway.app](https://powertracker-ai.up.railway.app/)
+> **סיסמה:** `1q2w3e4r`
 
 ---
 
