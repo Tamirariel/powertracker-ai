@@ -1,6 +1,6 @@
 #קובץ עבודה מול הסוכנים . שליחת פרומפטים , הפעלת מודלים 
 
-
+import pandas as pd
 import anthropic
 import os
 import pickle
@@ -148,19 +148,29 @@ def find_key_cluster(lift_column, sex):
 
 
 #פונקציה שמוצאת קלאסטר של משתמש . (מספר)
-def cluster_user(lift_column,sex,Age,BodyweightKg,lift_value):
- #מציאת מודל מתאים לפי פרטים שהוזנו
- key_model = find_key_cluster(lift_column, sex)
- model = all_cluster_models[key_model]['model']
- scaler = all_cluster_models[key_model]['scaler']
+def cluster_user(lift_column, sex, Age, BodyweightKg, lift_value):
+    key_model = find_key_cluster(lift_column, sex)
+    if key_model is None:
+        raise ValueError(f"לא נמצא מודל עבור {lift_column} / {sex}")
 
- # נרמול נתוני המשתמש
- user_data = [[Age, BodyweightKg, lift_value]]
- 
+    entry  = all_cluster_models[key_model]
+    model  = entry['model']
+    scaler = entry['scaler']
 
- user_scaled = scaler.transform(user_data)
- cluster = model.predict(user_scaled)[0]
- return cluster , key_model
+    # טבלה עם שמות עמודות - כך sklearn מאמת את הסדר ולא נסמכים על מיקום
+    user_df = pd.DataFrame(
+        [[Age, BodyweightKg, lift_value]],
+        columns=['Age', 'BodyweightKg', lift_column]
+    )
+
+    # כל שלב מסודר לפי הסדר שעליו אומן אותו רכיב
+    scaled = pd.DataFrame(
+        scaler.transform(user_df[scaler.feature_names_in_]),
+        columns=scaler.feature_names_in_
+    )
+    cluster = model.predict(scaled[model.feature_names_in_])[0]
+
+    return int(cluster), key_model
 
 
 
