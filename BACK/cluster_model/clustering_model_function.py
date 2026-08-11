@@ -21,8 +21,10 @@ df = pd.read_csv(path + r'\cleaned_openpowerlifting.csv', low_memory=False)
 
 def analayze_clustering_model(df,lift_column,sex,k):
  scaler = StandardScaler()
+ if lift_column == 'TotalKg':
+    df = df[df['Event'] == 'SBD']
  #סינון טבלה רק לפי עמודות הרלוונטיות לסקוואט עם גיל, משקל גוף ומין
- df_new = df[['Age', lift_column, 'BodyweightKg', 'Sex']]
+ df_new = df[['Age', 'BodyweightKg', lift_column, 'Sex']]
 
 
  df_new = df_new[df_new['Age'].notna()]
@@ -47,20 +49,19 @@ def analayze_clustering_model(df,lift_column,sex,k):
 
 
 
-  #סטנדרזציה של העמודות
- df_new[['Age', 'BodyweightKg', lift_column]] = scaler.fit_transform(df_new[['Age', 'BodyweightKg', lift_column]])
- 
- 
+ FEATURES = ['Age', 'BodyweightKg', lift_column]
+
+ #סטנדרזציה של העמודות
+ df_new[FEATURES] = scaler.fit_transform(df_new[FEATURES])
+
  model = KMeans(n_clusters=k, random_state=42)
- df_new['cluster'] = model.fit_predict(df_new)
+ df_new['cluster'] = model.fit_predict(df_new[FEATURES])
 
- 
+ #החזרת הערכים המקוריים לצורך תיאור הקבוצות
+ original_values = scaler.inverse_transform(df_new[FEATURES])
+ df_new[['Age_real', 'BodyweightKg_real', f'{lift_column}_real']] = original_values
 
- original_values = scaler.inverse_transform(df_new[['Age', 'BodyweightKg', lift_column]])
- df_new[['Age_real', 'BodyweightKg_real',f'{lift_column}_real' ]] = original_values
- 
- return model,scaler,df_new 
-
+ return model, scaler, df_new
 
 
 configurations = [
@@ -79,9 +80,9 @@ configurations = [
     {'key': 'deadlift_f_age',    'lift_column': 'Best3DeadliftKg', 'sex': 'F', 'k': 3},
   
  
-    # TotalKg - ה-k שונה בכל קומבינציה 
-    {'key': 'total_m_age',    'lift_column': 'TotalKg', 'sex': 'M', 'k': 6},
-    {'key': 'total_f_age',    'lift_column': 'TotalKg', 'sex': 'F', 'k': 4},
+    # TotalKg k=3
+    {'key': 'total_m_age',    'lift_column': 'TotalKg', 'sex': 'M', 'k': 3},
+    {'key': 'total_f_age',    'lift_column': 'TotalKg', 'sex': 'F', 'k': 3},
  ]
  
 all_models = {}

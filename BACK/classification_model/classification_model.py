@@ -17,9 +17,10 @@ df = pd.read_csv(path + r'\cleaned_openpowerlifting.csv', low_memory=False)
 
 
 def analayze_classafication_model(data,lift_column,sex):
-    #בדיקת תרגיל נבחר לא נאל
+ if lift_column == 'TotalKg':
+    data = data[data['Event'] == 'SBD']
  df_new = data[data[lift_column].notna()]
-
+ 
  #בדיקה של רק מי שיש לו גיל
  df_new = df_new[df_new['Age'].notna()]
 
@@ -99,8 +100,10 @@ def analayze_classafication_model(data,lift_column,sex):
  #הרצת מודל על המשתנים 
  X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
 
- #max_depth=12 נבחר לפי ניסוי שבדק דיוק מול גודל קובץ (ראה max_depth_results.txt)
- #שומר על רוב הדיוק (הפסד ~2.5 נק' בממוצע) תמורת קובץ קטן פי 4
+ # max_depth=12 - נבחר לפי ניסוי דיוק מול גודל (ראה max_depth_results/)
+ # 15 ומעלה: 232MB+ לפני דחיסה, חורג מיעד הריפו.
+ # 8: חוסך פי 5 בנפח אך עולה 3.5 נק' דיוק - כרבע מהסיגנל מעל בייסליין 33%.
+ # 12: 24MB אחרי gzip, שומר על רוב הדיוק.
  model = RandomForestClassifier(max_depth=12, random_state=42)
  model.fit(X_train, y_train)
 

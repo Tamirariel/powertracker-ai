@@ -101,16 +101,18 @@ def build_cluster_documents(all_cluster_models):
 
 
 def build_slim_cluster_models(all_cluster_models):
-    """
-    העתקת מודלי הקלאסטרינג בלי טבלאות הדאטה.
-
-    נשמרים: model (KMeans), scaler, lift_column, sex, k.
-    יורד: table - כ-94% מנפח הקובץ.
-    """
     slim = {}
     for key in all_cluster_models:
         entry = dict(all_cluster_models[key])
         entry.pop('table', None)
+
+        # שני הרכיבים חייבים לראות אותם פיצ'רים באותו סדר.
+        # אי-התאמה כאן לא זורקת שגיאה בזמן ריצה - היא מחזירה שיוכים שגויים בשקט.
+        s = list(entry['scaler'].feature_names_in_)
+        m = list(entry['model'].feature_names_in_)
+        if s != m:
+            raise ValueError(f"סדר פיצ'רים שונה ב-{key}: scaler={s}, model={m}")
+
         slim[key] = entry
     return slim
 

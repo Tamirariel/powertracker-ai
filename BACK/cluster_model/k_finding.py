@@ -33,9 +33,11 @@ lift_heb = {
 
 def check_k_for_model(df,lift_column,sex,include_age):
  scaler = StandardScaler()
+ if lift_column == 'TotalKg':
+    df = df[df['Event'] == 'SBD']
 
  #סינון טבלה רק לפי עמודות הרלוונטיות עם גיל, משקל גוף ומין
- df_new = df[['Age', lift_column, 'BodyweightKg', 'Sex']]
+ df_new = df[['Age', 'BodyweightKg', lift_column, 'Sex']]
 
 
  #בדיקת כולל גיל או לא

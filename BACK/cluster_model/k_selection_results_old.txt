@@ -1,0 +1,152 @@
+דוח לפני סינון Event - כולל תחרויות B/D/BD בעמודת TotalKg. נשמר לצורך השוואה בלבד.
+
+דוח בחירת k למודלי הקלאסטרינג
+silhouette חושב על מדגם של 15000 עם random_state=42 - בדיוק כמו הבדיקה המקורית
+============================================================
+
+מודל: squat_m_age (סקוואט | גברים | עם גיל)
+מספר שורות: 196588
+k=2: silhouette=0.3128
+k=3: silhouette=0.3638  <-- הכי טוב
+k=4: silhouette=0.3019
+k=5: silhouette=0.2918
+k=6: silhouette=0.2611
+
+מודל: squat_f_age (סקוואט | נשים | עם גיל)
+מספר שורות: 90114
+k=2: silhouette=0.2926
+k=3: silhouette=0.3255  <-- הכי טוב
+k=4: silhouette=0.2902
+k=5: silhouette=0.2470
+k=6: silhouette=0.2425
+
+מודל: squat_m_no_age (סקוואט | גברים | ללא גיל)
+מספר שורות: 257254
+k=2: silhouette=0.4304  <-- הכי טוב
+k=3: silhouette=0.3602
+k=4: silhouette=0.3153
+k=5: silhouette=0.3384
+k=6: silhouette=0.3186
+
+מודל: squat_f_no_age (סקוואט | נשים | ללא גיל)
+מספר שורות: 114931
+k=2: silhouette=0.4132  <-- הכי טוב
+k=3: silhouette=0.3594
+k=4: silhouette=0.3246
+k=5: silhouette=0.3508
+k=6: silhouette=0.3367
+
+מודל: bench_m_age (בנץ | גברים | עם גיל)
+מספר שורות: 282688
+k=2: silhouette=0.3217
+k=3: silhouette=0.3662  <-- הכי טוב
+k=4: silhouette=0.3048
+k=5: silhouette=0.2924
+k=6: silhouette=0.2668
+
+מודל: bench_f_age (בנץ | נשים | עם גיל)
+מספר שורות: 109441
+k=2: silhouette=0.2933
+k=3: silhouette=0.3218  <-- הכי טוב
+k=4: silhouette=0.3127
+k=5: silhouette=0.2601
+k=6: silhouette=0.2606
+
+מודל: bench_m_no_age (בנץ | גברים | ללא גיל)
+מספר שורות: 367933
+k=2: silhouette=0.4413  <-- הכי טוב
+k=3: silhouette=0.3593
+k=4: silhouette=0.3215
+k=5: silhouette=0.3358
+k=6: silhouette=0.3193
+
+מודל: bench_f_no_age (בנץ | נשים | ללא גיל)
+מספר שורות: 140259
+k=2: silhouette=0.4106  <-- הכי טוב
+k=3: silhouette=0.3823
+k=4: silhouette=0.3538
+k=5: silhouette=0.3475
+k=6: silhouette=0.3189
+
+מודל: deadlift_m_age (דדליפט | גברים | עם גיל)
+מספר שורות: 226691
+k=2: silhouette=0.2995
+k=3: silhouette=0.3460  <-- הכי טוב
+k=4: silhouette=0.2994
+k=5: silhouette=0.2641
+k=6: silhouette=0.2385
+
+מודל: deadlift_f_age (דדליפט | נשים | עם גיל)
+מספר שורות: 102030
+k=2: silhouette=0.2829
+k=3: silhouette=0.3158  <-- הכי טוב
+k=4: silhouette=0.2973
+k=5: silhouette=0.2705
+k=6: silhouette=0.2459
+
+מודל: deadlift_m_no_age (דדליפט | גברים | ללא גיל)
+מספר שורות: 295437
+k=2: silhouette=0.4102  <-- הכי טוב
+k=3: silhouette=0.3491
+k=4: silhouette=0.3220
+k=5: silhouette=0.3461
+k=6: silhouette=0.3303
+
+מודל: deadlift_f_no_age (דדליפט | נשים | ללא גיל)
+מספר שורות: 129596
+k=2: silhouette=0.3934  <-- הכי טוב
+k=3: silhouette=0.3739
+k=4: silhouette=0.3260
+k=5: silhouette=0.3486
+k=6: silhouette=0.3200
+
+מודל: total_m_age (טוטאל | גברים | עם גיל)
+מספר שורות: 306875
+k=2: silhouette=0.3140
+k=3: silhouette=0.3124
+k=4: silhouette=0.3182
+k=5: silhouette=0.3224
+k=6: silhouette=0.3263  <-- הכי טוב
+
+מודל: total_f_age (טוטאל | נשים | עם גיל)
+מספר שורות: 119213
+k=2: silhouette=0.2941
+k=3: silhouette=0.2883
+k=4: silhouette=0.3152  <-- הכי טוב
+k=5: silhouette=0.2910
+k=6: silhouette=0.2793
+
+מודל: total_m_no_age (טוטאל | גברים | ללא גיל)
+מספר שורות: 396443
+k=2: silhouette=0.3859
+k=3: silhouette=0.4083
+k=4: silhouette=0.4267  <-- הכי טוב
+k=5: silhouette=0.4029
+k=6: silhouette=0.3944
+
+מודל: total_f_no_age (טוטאל | נשים | ללא גיל)
+מספר שורות: 151225
+k=2: silhouette=0.3497
+k=3: silhouette=0.4167  <-- הכי טוב
+k=4: silhouette=0.3777
+k=5: silhouette=0.3856
+k=6: silhouette=0.3489
+
+============================================================
+סיכום - k מומלץ לכל מודל:
+squat_m_age: k=3 (silhouette=0.3638)
+squat_f_age: k=3 (silhouette=0.3255)
+squat_m_no_age: k=2 (silhouette=0.4304)
+squat_f_no_age: k=2 (silhouette=0.4132)
+bench_m_age: k=3 (silhouette=0.3662)
+bench_f_age: k=3 (silhouette=0.3218)
+bench_m_no_age: k=2 (silhouette=0.4413)
+bench_f_no_age: k=2 (silhouette=0.4106)
+deadlift_m_age: k=3 (silhouette=0.3460)
+deadlift_f_age: k=3 (silhouette=0.3158)
+deadlift_m_no_age: k=2 (silhouette=0.4102)
+deadlift_f_no_age: k=2 (silhouette=0.3934)
+total_m_age: k=6 (silhouette=0.3263)
+total_f_age: k=4 (silhouette=0.3152)
+total_m_no_age: k=4 (silhouette=0.4267)
+total_f_no_age: k=3 (silhouette=0.4167)

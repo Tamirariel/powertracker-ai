@@ -1,3 +1,5 @@
+דוח נוכחי - אחרי סינון Event=='SBD' במודלי הטוטאל.
+
 דוח בחירת k למודלי הקלאסטרינג
 silhouette חושב על מדגם של 15000 עם random_state=42 - בדיוק כמו הבדיקה המקורית
 ============================================================
@@ -99,36 +101,36 @@ k=5: silhouette=0.3486
 k=6: silhouette=0.3200
 
 מודל: total_m_age (טוטאל | גברים | עם גיל)
-מספר שורות: 306875
-k=2: silhouette=0.3140
-k=3: silhouette=0.3124
-k=4: silhouette=0.3182
-k=5: silhouette=0.3224
-k=6: silhouette=0.3263  <-- הכי טוב
+מספר שורות: 193641
+k=2: silhouette=0.3125
+k=3: silhouette=0.3621  <-- הכי טוב
+k=4: silhouette=0.3012
+k=5: silhouette=0.2624
+k=6: silhouette=0.2671
 
 מודל: total_f_age (טוטאל | נשים | עם גיל)
-מספר שורות: 119213
-k=2: silhouette=0.2941
-k=3: silhouette=0.2883
-k=4: silhouette=0.3152  <-- הכי טוב
-k=5: silhouette=0.2910
-k=6: silhouette=0.2793
+מספר שורות: 89764
+k=2: silhouette=0.2955
+k=3: silhouette=0.3246  <-- הכי טוב
+k=4: silhouette=0.3021
+k=5: silhouette=0.2806
+k=6: silhouette=0.2465
 
 מודל: total_m_no_age (טוטאל | גברים | ללא גיל)
-מספר שורות: 396443
-k=2: silhouette=0.3859
-k=3: silhouette=0.4083
-k=4: silhouette=0.4267  <-- הכי טוב
-k=5: silhouette=0.4029
-k=6: silhouette=0.3944
+מספר שורות: 253683
+k=2: silhouette=0.4235  <-- הכי טוב
+k=3: silhouette=0.3546
+k=4: silhouette=0.3202
+k=5: silhouette=0.3456
+k=6: silhouette=0.3339
 
 מודל: total_f_no_age (טוטאל | נשים | ללא גיל)
-מספר שורות: 151225
-k=2: silhouette=0.3497
-k=3: silhouette=0.4167  <-- הכי טוב
-k=4: silhouette=0.3777
-k=5: silhouette=0.3856
-k=6: silhouette=0.3489
+מספר שורות: 114417
+k=2: silhouette=0.4117  <-- הכי טוב
+k=3: silhouette=0.3670
+k=4: silhouette=0.3432
+k=5: silhouette=0.3461
+k=6: silhouette=0.3272
 
 ============================================================
 סיכום - k מומלץ לכל מודל:
@@ -144,7 +146,7 @@ deadlift_m_age: k=3 (silhouette=0.3460)
 deadlift_f_age: k=3 (silhouette=0.3158)
 deadlift_m_no_age: k=2 (silhouette=0.4102)
 deadlift_f_no_age: k=2 (silhouette=0.3934)
-total_m_age: k=6 (silhouette=0.3263)
-total_f_age: k=4 (silhouette=0.3152)
-total_m_no_age: k=4 (silhouette=0.4267)
-total_f_no_age: k=3 (silhouette=0.4167)
+total_m_age: k=3 (silhouette=0.3621)
+total_f_age: k=3 (silhouette=0.3246)
+total_m_no_age: k=2 (silhouette=0.4235)
+total_f_no_age: k=2 (silhouette=0.4117)
