@@ -86,16 +86,17 @@ def find_key_class_predict(lift_column, sex):
     
 
 #פונקציה שמחזירה מודל לפי המפתח של הCLASS
-def class_user_predict(lift_column,sex,Age,BodyweightKg,lift_value):
- #מציאת מודל מתאים לפי פרטים שהוזנו
- key_model = find_key_class_predict(lift_column, sex)
- model = all_classification_models[key_model]
+def class_user_predict(lift_column, sex, Age, BodyweightKg, lift_value):
+    key_model = find_key_class_predict(lift_column, sex)
+    model = all_classification_models[key_model]
 
- # נרמול נתוני המשתמש
- user_data = [[Age, BodyweightKg, lift_value]]
- 
- class_predict = model.predict(user_data)[0]
- return class_predict , key_model   
+    # טבלה עם שמות עמודות - כך sklearn מאמת את הסדר ולא נסמכים על מיקום
+    user_df = pd.DataFrame(
+        [[Age, BodyweightKg, lift_value]],
+        columns=['Age', 'BodyweightKg', lift_column]
+    )
+    class_predict = model.predict(user_df[model.feature_names_in_])[0]
+    return class_predict, key_model
 
 
 
