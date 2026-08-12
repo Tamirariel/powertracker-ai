@@ -102,13 +102,12 @@ def class_user_predict(lift_column, sex, Age, BodyweightKg, lift_value):
 
 #פונקציית שאלת הסוכן classification
 @observe()
-def ask_agent_classifiation(lift_column,sex,Age,BodyweightKg,lift_value):
+def ask_agent_classifiation(lift_column, sex, Age, BodyweightKg, lift_value):
  if Age is None:
      return "כדי לבצע ניתוח מדויק צריך את הגיל שלך - מה גילך?"
  the_class, key_model = class_user_predict(lift_column, sex, Age, BodyweightKg, lift_value)
 
-    
-    # בניית הפרומפט 
+ # בניית הפרומפט
  progress_map = {0: 'איטי', 1: 'בינוני', 2: 'מהיר'}
 
  prompt = f"""אתה מנתח אימוני פאוורליפטינג.
@@ -117,14 +116,18 @@ def ask_agent_classifiation(lift_column,sex,Age,BodyweightKg,lift_value):
  - מגדר: {'גבר' if sex == 'M' else 'אישה'}
  - גיל: {Age}
  - משקל גוף: {BodyweightKg} קג
- - ביצוע: {lift_value} קג
+ - ביצוע ב-{lift_column}: {lift_value} קג
 
  המודל חזה שקצב ההתקדמות הצפוי שלך הוא: {progress_map[the_class]}
 
- הסבר בעברית מה המשמעות של קצב זה, ומה המשתמש יכול לצפות לו."""
+ הסבר בעברית מה המשמעות של קצב זה.
 
+ חשוב: הנתונים שלמעלה הם היחידים שעליהם מבוסס הניתוח - אל תשתמש
+ בערכים אחרים מההקשר. אל תספק אחוזים, טווחי משקל או טווחי זמן
+ קונקרטיים - המודל החזיר תווית בלבד (איטי/בינוני/מהיר), לא תחזית
+ מספרית."""
 
- # שלב שליחה לקלוד 
+ # שלב שליחה לקלוד
  message = client.messages.create(
         model="claude-sonnet-4-6",
         max_tokens=1024,
